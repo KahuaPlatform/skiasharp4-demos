@@ -1,0 +1,10 @@
+{
+  "background_color": "#ffffff",
+  "description": "Lua",
+  "display": "standalone",
+  "name": "Lua",
+  "short_name": "Lua",
+  "start_url": "/index.html",
+  "theme_color": "#ffffff",
+  "scope": "/"
+}
