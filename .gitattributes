@@ -1,0 +1,113 @@
+# This file configures git's per-path attributes for the consolidated repo.
+#
+# LFS NOTE: Commit .gitattributes BEFORE adding any matching binary files,
+# otherwise they go into git history as raw blobs and require a
+# `git lfs migrate import` + force-push to fix. See CLAUDE.md for the
+# core2/Noto-OTF incident that motivated this rule.
+
+# ---- Line-ending normalization ----
+* text=auto
+
+# Source files — normalize to LF in the repo, native on checkout (matches existing .editorconfig)
+*.cs       text eol=lf diff=csharp
+*.csproj   text eol=lf
+*.sln      text eol=crlf
+*.xaml     text eol=lf working-tree-encoding=UTF-8-BOM
+*.xml      text eol=lf
+*.json     text eol=lf
+*.props    text eol=lf
+*.targets  text eol=lf
+*.md       text eol=lf
+*.yml      text eol=lf
+*.yaml     text eol=lf
+*.config   text eol=lf
+*.editorconfig text eol=lf
+*.gitattributes text eol=lf
+*.gitignore text eol=lf
+
+# PowerShell scripts — keep CRLF on Windows
+*.ps1      text eol=crlf
+*.psm1     text eol=crlf
+*.psd1     text eol=crlf
+*.cmd      text eol=crlf
+*.bat      text eol=crlf
+
+# Shell scripts — always LF
+*.sh       text eol=lf
+
+# ---- LFS-tracked binary types ----
+
+# Raster images
+*.png  filter=lfs diff=lfs merge=lfs -text
+*.jpg  filter=lfs diff=lfs merge=lfs -text
+*.jpeg filter=lfs diff=lfs merge=lfs -text
+*.gif  filter=lfs diff=lfs merge=lfs -text
+*.bmp  filter=lfs diff=lfs merge=lfs -text
+*.tiff filter=lfs diff=lfs merge=lfs -text
+*.tif  filter=lfs diff=lfs merge=lfs -text
+*.webp filter=lfs diff=lfs merge=lfs -text
+*.ico  filter=lfs diff=lfs merge=lfs -text
+
+# SVG is text — keep as text, do NOT LFS
+*.svg  text eol=lf
+
+# Fonts (per CLAUDE.md memory — core2 .otf incident)
+*.ttf   filter=lfs diff=lfs merge=lfs -text
+*.otf   filter=lfs diff=lfs merge=lfs -text
+*.woff  filter=lfs diff=lfs merge=lfs -text
+*.woff2 filter=lfs diff=lfs merge=lfs -text
+*.eot   filter=lfs diff=lfs merge=lfs -text
+
+# Audio
+*.wav  filter=lfs diff=lfs merge=lfs -text
+*.mp3  filter=lfs diff=lfs merge=lfs -text
+*.ogg  filter=lfs diff=lfs merge=lfs -text
+*.flac filter=lfs diff=lfs merge=lfs -text
+*.m4a  filter=lfs diff=lfs merge=lfs -text
+*.aac  filter=lfs diff=lfs merge=lfs -text
+
+# Video
+*.mp4  filter=lfs diff=lfs merge=lfs -text
+*.mov  filter=lfs diff=lfs merge=lfs -text
+*.webm filter=lfs diff=lfs merge=lfs -text
+*.mkv  filter=lfs diff=lfs merge=lfs -text
+*.avi  filter=lfs diff=lfs merge=lfs -text
+
+# 3D models (Uno3dViewer territory)
+*.glb   filter=lfs diff=lfs merge=lfs -text
+*.gltf  filter=lfs diff=lfs merge=lfs -text
+*.fbx   filter=lfs diff=lfs merge=lfs -text
+*.obj   filter=lfs diff=lfs merge=lfs -text
+*.blend filter=lfs diff=lfs merge=lfs -text
+*.dae   filter=lfs diff=lfs merge=lfs -text
+*.3ds   filter=lfs diff=lfs merge=lfs -text
+*.stl   filter=lfs diff=lfs merge=lfs -text
+*.ply   filter=lfs diff=lfs merge=lfs -text
+
+# Design files
+*.psd  filter=lfs diff=lfs merge=lfs -text
+*.ai   filter=lfs diff=lfs merge=lfs -text
+*.sketch filter=lfs diff=lfs merge=lfs -text
+*.fig  filter=lfs diff=lfs merge=lfs -text
+*.xd   filter=lfs diff=lfs merge=lfs -text
+
+# Documents
+*.pdf  filter=lfs diff=lfs merge=lfs -text
+
+# Archives
+*.zip filter=lfs diff=lfs merge=lfs -text
+*.tar filter=lfs diff=lfs merge=lfs -text
+*.gz  filter=lfs diff=lfs merge=lfs -text
+*.7z  filter=lfs diff=lfs merge=lfs -text
+*.rar filter=lfs diff=lfs merge=lfs -text
+
+# Native binaries — typically gitignored (under bin/), but pin LFS if any slip in
+*.dll    filter=lfs diff=lfs merge=lfs -text
+*.exe    filter=lfs diff=lfs merge=lfs -text
+*.so     filter=lfs diff=lfs merge=lfs -text
+*.dylib  filter=lfs diff=lfs merge=lfs -text
+*.pdb    filter=lfs diff=lfs merge=lfs -text
+
+# Unity / Unreal etc. binary asset hints (future-proofing)
+*.unity filter=lfs diff=lfs merge=lfs -text
+*.uasset filter=lfs diff=lfs merge=lfs -text

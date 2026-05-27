@@ -1,0 +1,149 @@
+## Standard Visual Studio / .NET ignores (from `dotnet new gitignore`)
+## Per-demo .gitignore files under Source/<Demo>/ duplicate most of these
+## and remain in place so each demo stays self-contained if extracted.
+
+# dotenv files
+.env
+
+# User-specific files
+*.rsuser
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# User-specific files (MonoDevelop/Xamarin Studio)
+*.userprefs
+
+# Mono auto generated files
+mono_crash.*
+
+# Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+# Visual Studio cache/options directory
+.vs/
+
+# Visual Studio profiler / test cache
+*.psess
+*.vsp
+*.vspx
+*.sap
+TestResults/
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+
+# .NET
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# Files built by Visual Studio
+*_i.c
+*_p.c
+*_h.h
+*.ilk
+*.meta
+*.obj
+*.iobj
+*.pch
+*.pdb
+*.ipdb
+*.pgc
+*.pgd
+*.rsp
+!Directory.Build.rsp
+*.sbr
+*.tlb
+*.tli
+*.tlh
+*.tmp
+*.tmp_proj
+*_wpftmp.csproj
+*.log
+*.tlog
+*.vspscc
+*.vssscc
+.builds
+*.pidb
+*.svclog
+*.scc
+
+# NuGet
+*.nupkg
+*.snupkg
+**/[Pp]ackages/*
+!**/[Pp]ackages/build/
+*.nuget.props
+*.nuget.targets
+
+# Windows app packages
+AppPackages/
+BundleArtifacts/
+Package.StoreAssociation.xml
+_pkginfo.txt
+*.appx
+*.appxbundle
+*.appxupload
+
+# JetBrains Rider
+*.sln.iml
+.idea/
+
+# VS Code (allow shared settings/launch but ignore caches)
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+.history/
+
+# Misc OS
+.DS_Store
+Thumbs.db
+ehthumbs.db
+$RECYCLE.BIN/
+desktop.ini
+
+# Vim
+*.swp
+
+# Visual Studio cache files
+*.[Cc]ache
+!?*.[Cc]ache/
+
+# Single Target Config / Publish Profiles
+solution-config.props
+*.[Pp]ublish.xml
+*.pubxml
+*.publishproj
+!**/Properties/PublishProfiles/*.pubxml
+PublishScripts/
+
+# Coverage
+*.coverage
+*.coveragexml
+coverage*.json
+coverage*.xml
+coverage*.info
+
+# Backup files
+*~
+*.bak
+
+# Local-only logs at the repo root (preserved-but-ignored placeholders if any)
+*.local.log
