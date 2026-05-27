@@ -7,12 +7,12 @@ A consolidated home for several [Uno Platform](https://platform.uno) + [SkiaShar
 | Demo | TFMs | What it shows | Status |
 |---|---|---|---|
 | [UnoGallery](Docs/UnoGallery/README.md) | net10.0 (android / ios / wasm / desktop) | 30-tile image gallery with 16 live procedural tiles (Conway, Boids, Reaction-Diffusion, FFT, Lorenz, etc.), SKSL post-processing, EXIF-aware folder loader, microphone-reactive ambient effects. The "kitchen-sink" demo. | Working |
-| [UnoAsteroids](Docs/UnoAsteroids/README.md) | net10.0 (wasm / desktop) | Vector Asteroids clone with retro and neon-glow visual modes, perspective-tilted scrolling marquee, SkiaSharp 4 `SKPathBuilder` patterns. | Working |
+| [Pohaku](Docs/Pohaku/README.md) | net10.0 (wasm / desktop) | Vector Asteroids clone with retro and neon-glow visual modes, perspective-tilted scrolling marquee, SkiaSharp 4 `SKPathBuilder` patterns. | Working |
 | [KahuaNetwork](Docs/KahuaNetwork/README.md) | net10.0 (wasm / desktop) | Holographic 3D city of glowing towers connected by document-exchange data streams, with a "global view" particle-explode-into-topology-graph effect. | Working |
-| [UnoGalaga](Docs/UnoGalaga/README.md) | net10.0 (wasm / desktop) | Vertical-shooter scaffold in the UnoAsteroids vector + neon style. Title screen + player movement; enemy formations / dive logic not implemented yet. | Scaffold |
+| [HokuLele](Docs/HokuLele/README.md) | net10.0 (wasm / desktop) | Vertical-shooter scaffold in the Pohaku vector + neon style. Title screen + player movement; enemy formations / dive logic not implemented yet. | Scaffold |
 | [Uno3dViewer](Source/Uno3dViewer/) | net10.0 (desktop only) | OpenGL 3D model viewer using Silk.NET + Assimp, rendered into Uno's `GLCanvasElement`. | Working |
 
-Each demo's full per-demo docs live in [Docs/](Docs/). The original source repos these were imported from (`UnoGallery`, `UnoAsteroids`, `ProjectNebula`, `Uno3dViewer`) remain untouched at sibling paths under `C:\Repos\`; you can retire them once you've verified the consolidated copies.
+Each demo's full per-demo docs live in [Docs/](Docs/). The original source repos these were imported from (`UnoGallery`, `Pohaku`, `ProjectNebula`, `Uno3dViewer`) remain untouched at sibling paths under `C:\Repos\`; you can retire them once you've verified the consolidated copies.
 
 ## Layout
 
@@ -20,9 +20,9 @@ Each demo's full per-demo docs live in [Docs/](Docs/). The original source repos
 UnoSkiaDemos/
 ├── Source/                  Per-demo solution folders, each self-contained
 │   ├── UnoGallery/
-│   ├── UnoAsteroids/
+│   ├── Pohaku/
 │   ├── KahuaNetwork/
-│   ├── UnoGalaga/
+│   ├── HokuLele/
 │   └── Uno3dViewer/
 ├── Docs/                    Per-demo READMEs, design docs, screenshots
 │   └── <DemoName>/
@@ -61,10 +61,10 @@ The `Builds/` folder has one Build- and one Run- script per demo, plus a `Build-
 .\Builds\Build-UnoGallery.ps1
 
 # Build a single demo (Debug, wasm)
-.\Builds\Build-UnoAsteroids.ps1 -Configuration Debug -Wasm
+.\Builds\Build-Pohaku.ps1 -Configuration Debug -Wasm
 
 # Run a single demo (Release, desktop)
-.\Builds\Run-UnoGalaga.ps1
+.\Builds\Run-HokuLele.ps1
 
 # Run a single demo in wasm — opens a local dev server
 .\Builds\Run-KahuaNetwork.ps1 -Wasm
@@ -76,7 +76,7 @@ You can also invoke `dotnet` directly. Each demo's csproj lives at `Source/<Demo
 
 ```powershell
 dotnet build Source/UnoGallery/UnoGallery/UnoGallery.csproj -c Release -f net10.0-desktop
-dotnet run --project Source/UnoAsteroids/UnoAsteroids/UnoAsteroids.csproj -f net10.0-browserwasm
+dotnet run --project Source/Pohaku/Pohaku/Pohaku.csproj -f net10.0-browserwasm
 ```
 
 ## Adding a new demo
@@ -86,14 +86,14 @@ dotnet run --project Source/UnoAsteroids/UnoAsteroids/UnoAsteroids.csproj -f net
 3. Append the script name to the `$scripts` array in `Builds/Build-All.ps1`.
 4. Add `Docs/<NewDemo>/README.md`.
 
-The fastest way is to copy an existing demo as a starting point (UnoAsteroids if you want vector+neon, UnoGallery if you want the full SKCanvasElement scene + effects pipeline).
+The fastest way is to copy an existing demo as a starting point (Pohaku if you want vector+neon, UnoGallery if you want the full SKCanvasElement scene + effects pipeline).
 
 ## Stack notes per demo
 
 The demos deliberately use different versions and feature sets — that's the point of the repo. Don't try to unify SkiaSharp versions or Uno features across them.
 
 - UnoGallery uses a `$(SkiaSharpVersion)`-gated build (defaults to SkiaSharp 3.119.4 stable; pass `-p:SkiaSharpVersion=4.147.0-preview.3.1` to test the v4 preview)
-- UnoAsteroids and UnoGalaga pin SkiaSharp 4.147.0-preview.3.1
+- Pohaku and HokuLele pin SkiaSharp 4.147.0-preview.3.1
 - KahuaNetwork uses SkiaSharp 3.119.4 + `Uno.WinUI.Graphics2DSK`
 - Uno3dViewer adds Silk.NET (OpenGL + Assimp) and uses `<UnoFeatures>...GLCanvas</UnoFeatures>`
 

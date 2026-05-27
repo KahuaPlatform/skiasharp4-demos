@@ -8,9 +8,9 @@ $ErrorActionPreference = 'Stop'
 
 $scripts = @(
     'Build-UnoGallery.ps1',
-    'Build-UnoAsteroids.ps1',
+    'Build-Pohaku.ps1',
     'Build-KahuaNetwork.ps1',
-    'Build-UnoGalaga.ps1',
+    'Build-HokuLele.ps1',
     'Build-Uno3dViewer.ps1'
 )
 

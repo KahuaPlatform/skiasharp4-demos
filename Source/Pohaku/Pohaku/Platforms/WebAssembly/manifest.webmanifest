@@ -1,0 +1,10 @@
+{
+  "background_color": "#ffffff",
+  "description": "Pohaku",
+  "display": "standalone",
+  "name": "Pohaku",
+  "short_name": "Pohaku",
+  "start_url": "/index.html",
+  "theme_color": "#ffffff",
+  "scope": "/"
+}

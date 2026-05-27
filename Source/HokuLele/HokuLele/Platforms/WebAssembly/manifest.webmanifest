@@ -1,0 +1,10 @@
+{
+  "background_color": "#ffffff",
+  "description": "HokuLele",
+  "display": "standalone",
+  "name": "HokuLele",
+  "short_name": "HokuLele",
+  "start_url": "/index.html",
+  "theme_color": "#ffffff",
+  "scope": "/"
+}
