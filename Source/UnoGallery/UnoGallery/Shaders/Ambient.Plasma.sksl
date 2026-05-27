@@ -1,0 +1,54 @@
+// Animated ambient background. Two layers of curl-noise driven by time, tinted
+// by an accent colour pulled from the focused gallery tile.
+//
+// Uniforms:
+//   iTime       - seconds since app start
+//   iResolution - viewport in pixels
+//   iAccent     - tint colour, premultiplied alpha
+//   iIntensity  - 0..1 master amplitude
+//
+// Entry: half4 main(float2 fragCoord)
+
+uniform float  iTime;
+uniform float2 iResolution;
+uniform float4 iAccent;
+uniform float  iIntensity;
+
+float hash(float2 p) {
+    p = fract(p * float2(123.34, 456.21));
+    p += dot(p, p + 45.32);
+    return fract(p.x * p.y);
+}
+
+float noise(float2 p) {
+    float2 i = floor(p);
+    float2 f = fract(p);
+    float a = hash(i);
+    float b = hash(i + float2(1.0, 0.0));
+    float c = hash(i + float2(0.0, 1.0));
+    float d = hash(i + float2(1.0, 1.0));
+    float2 u = f * f * (3.0 - 2.0 * f);
+    return mix(a, b, u.x) + (c - a) * u.y * (1.0 - u.x) + (d - b) * u.x * u.y;
+}
+
+half4 main(float2 fragCoord) {
+    float2 uv = fragCoord / iResolution;
+    float2 p  = uv * 4.0;
+
+    float t = iTime * 0.08;
+    float n1 = noise(p + float2( t,  t * 0.7));
+    float n2 = noise(p * 2.0 + float2(-t * 1.3, t * 0.5) + n1);
+    float n  = mix(n1, n2, 0.55);
+
+    // Radial fall-off so the centre feels heavier than the edges.
+    float2 c = uv - 0.5;
+    float radial = 1.0 - smoothstep(0.0, 0.85, length(c));
+
+    float v = pow(n * radial, 1.4) * iIntensity;
+
+    half3 base   = half3(0.04, 0.05, 0.08);          // near-black
+    half3 accent = half3(iAccent.rgb);
+    half3 col    = mix(base, accent, v);
+
+    return half4(col, 1.0);
+}

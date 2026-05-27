@@ -1,0 +1,53 @@
+<Project ToolsVersion="15.0">
+  <!--
+    To update the version of Uno, you should instead update the Sdk version in the global.json file.
+
+    See https://aka.platform.uno/using-uno-sdk for more information.
+    See https://aka.platform.uno/using-uno-sdk#implicit-packages for more information regarding the Implicit Packages.
+
+    SkiaSharp version is driven by $(SkiaSharpVersion) in Directory.Build.props.
+    Default is 3.119.4 (stable). When that property names a 4.x preview, the
+    pin block below kicks in to force transitive SkiaSharp.* and HarfBuzzSharp.*
+    packages up off their 3.119.0-floor declarations in Uno's runtime libs.
+    v3 doesn't need this — Uno's transitive declarations already resolve cleanly.
+  -->
+  <PropertyGroup Condition="$(SkiaSharpVersion.StartsWith('4.'))">
+    <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
+  </PropertyGroup>
+  <!-- Windows-desktop-only packages — referenced conditionally in UnoGallery.csproj. -->
+  <ItemGroup>
+    <PackageVersion Include="NAudio" Version="2.2.1" />
+    <PackageVersion Include="System.Diagnostics.PerformanceCounter" Version="9.0.0" />
+  </ItemGroup>
+
+  <ItemGroup Condition="$(SkiaSharpVersion.StartsWith('4.'))">
+    <PackageVersion Include="SkiaSharp" Version="$(SkiaSharpVersion)" />
+    <PackageVersion Include="SkiaSharp.Views" Version="$(SkiaSharpVersion)" />
+    <PackageVersion Include="SkiaSharp.HarfBuzz" Version="$(SkiaSharpVersion)" />
+    <PackageVersion Include="SkiaSharp.NativeAssets.Android" Version="$(SkiaSharpVersion)" />
+    <PackageVersion Include="SkiaSharp.NativeAssets.iOS" Version="$(SkiaSharpVersion)" />
+    <PackageVersion Include="SkiaSharp.NativeAssets.tvOS" Version="$(SkiaSharpVersion)" />
+    <PackageVersion Include="SkiaSharp.NativeAssets.MacCatalyst" Version="$(SkiaSharpVersion)" />
+    <PackageVersion Include="SkiaSharp.NativeAssets.Linux" Version="$(SkiaSharpVersion)" />
+    <PackageVersion Include="SkiaSharp.NativeAssets.macOS" Version="$(SkiaSharpVersion)" />
+    <PackageVersion Include="SkiaSharp.NativeAssets.Win32" Version="$(SkiaSharpVersion)" />
+    <PackageVersion Include="SkiaSharp.NativeAssets.WebAssembly" Version="$(SkiaSharpVersion)" />
+    <PackageVersion Include="SkiaSharp.Skottie" Version="$(SkiaSharpVersion)" />
+    <PackageVersion Include="SkiaSharp.Views.Uno.WinUI" Version="$(SkiaSharpVersion)" />
+    <PackageVersion Include="SkiaSharp.Views.WinUI" Version="$(SkiaSharpVersion)" />
+    <!--
+      HarfBuzzSharp ABI tracks SkiaSharp; the 8.3.1.6-preview.3.1 line is the
+      build aligned with SkiaSharp 4.147.0-preview.3.1. Adjust if you point
+      SkiaSharpVersion at a different preview drop.
+    -->
+    <PackageVersion Include="HarfBuzzSharp" Version="8.3.1.6-preview.3.1" />
+    <PackageVersion Include="HarfBuzzSharp.NativeAssets.Android" Version="8.3.1.6-preview.3.1" />
+    <PackageVersion Include="HarfBuzzSharp.NativeAssets.iOS" Version="8.3.1.6-preview.3.1" />
+    <PackageVersion Include="HarfBuzzSharp.NativeAssets.tvOS" Version="8.3.1.6-preview.3.1" />
+    <PackageVersion Include="HarfBuzzSharp.NativeAssets.MacCatalyst" Version="8.3.1.6-preview.3.1" />
+    <PackageVersion Include="HarfBuzzSharp.NativeAssets.Linux" Version="8.3.1.6-preview.3.1" />
+    <PackageVersion Include="HarfBuzzSharp.NativeAssets.macOS" Version="8.3.1.6-preview.3.1" />
+    <PackageVersion Include="HarfBuzzSharp.NativeAssets.Win32" Version="8.3.1.6-preview.3.1" />
+    <PackageVersion Include="HarfBuzzSharp.NativeAssets.WebAssembly" Version="8.3.1.6-preview.3.1" />
+  </ItemGroup>
+</Project>

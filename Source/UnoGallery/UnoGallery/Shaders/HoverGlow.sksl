@@ -1,0 +1,34 @@
+// Pulsing radial halo around the hovered tile. Soft exponential falloff
+// with two harmonics so the pulse breathes instead of strobing.
+//
+// Drawn additively (Plus blend) AFTER the tiles, so the halo lifts the
+// hovered tile out of the scene without affecting anything else.
+//
+// Uniforms:
+//   iCenter      tile center in pixels
+//   iRadius      halo radius in pixels (typically 1.5 * tile size)
+//   iColor       RGB tint (premultiplied below by strength)
+//   iTime        seconds since app start
+//
+// Entry: half4 main(float2 fragCoord)
+
+uniform float2 iCenter;
+uniform float  iRadius;
+uniform float3 iColor;
+uniform float  iTime;
+
+half4 main(float2 fragCoord) {
+    float d = distance(fragCoord, iCenter);
+    float k = d / iRadius;
+
+    // Soft exponential core with a falloff tail.
+    float core = exp(-k * 3.5);
+    float rim  = exp(-pow(max(k - 0.6, 0.0), 2.0) * 6.0);
+    float falloff = clamp(core + rim * 0.35, 0.0, 1.0);
+
+    // Slow + fast harmonics breathing together. Stays bright (never dims to 0).
+    float pulse = 0.62 + 0.22 * sin(iTime * 2.2) + 0.16 * sin(iTime * 5.1);
+
+    float s = falloff * pulse;
+    return half4(iColor * s, s);
+}

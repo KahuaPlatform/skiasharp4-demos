@@ -1,0 +1,10 @@
+{
+  "background_color": "#ffffff",
+  "description": "KahuaNetwork",
+  "display": "standalone",
+  "name": "KahuaNetwork",
+  "short_name": "KahuaNetwork",
+  "start_url": "/index.html",
+  "theme_color": "#ffffff",
+  "scope": "/"
+}

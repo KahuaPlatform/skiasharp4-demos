@@ -1,0 +1,37 @@
+// Per-tile plasma shader. Combines an XY sine field with a polar spiral so
+// the result moves in two ways at once. iOffset shifts the shader's origin
+// to the tile's top-left so the visible pattern always starts at uv=0
+// regardless of where the tile lives on the global canvas.
+//
+// Uniforms:
+//   iTime    seconds since app start
+//   iSize    tile size in pixels
+//   iOffset  tile top-left in canvas pixels
+//   iColorA  primary tint
+//   iColorB  secondary tint (highlights)
+//
+// Entry: half4 main(float2 fragCoord)
+
+uniform float  iTime;
+uniform float2 iSize;
+uniform float2 iOffset;
+uniform float4 iColorA;
+uniform float4 iColorB;
+
+half4 main(float2 fragCoord) {
+    float2 uv = (fragCoord - iOffset) / iSize - 0.5;
+    float r = length(uv);
+    float a = atan(uv.y, uv.x);
+
+    float wave   = sin(uv.x * 9.0 + iTime * 1.4) * cos(uv.y * 9.0 - iTime * 1.8);
+    float spiral = sin(r * 14.0 - iTime * 2.2 + a * 3.0);
+    float band   = sin((uv.x + uv.y) * 6.0 + iTime * 0.7);
+
+    float v = (wave * 0.40 + spiral * 0.40 + band * 0.20) * 0.5 + 0.5;
+
+    half3 col = mix(half3(iColorA.rgb), half3(iColorB.rgb), v);
+    col += half3(iColorB.rgb) * exp(-r * 3.5) * 0.35;   // soft hot core
+    col *= smoothstep(0.85, 0.0, r);                    // dim the corners
+
+    return half4(col, 1.0);
+}

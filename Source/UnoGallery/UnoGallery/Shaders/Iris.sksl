@@ -1,0 +1,44 @@
+// Circular iris reveal between two scenes. iCenter is the origin of the
+// reveal in normalised viewport coordinates (0..1); iProgress drives the
+// radius outward from 0 to the worst-case corner distance, then beyond by
+// 5 % so the edge fully clears the screen. Used for Detail enter/exit,
+// anchored at the focused tile's last position.
+//
+// Uniforms:
+//   iCenter      origin in [0..1]² of the iris
+//   iResolution  viewport in pixels
+//   iProgress    0..1, eased outside
+// Children:
+//   iSrcA        outgoing scene
+//   iSrcB        incoming scene
+
+uniform float2 iCenter;
+uniform float2 iResolution;
+uniform float  iProgress;
+uniform shader iSrcA;
+uniform shader iSrcB;
+
+half4 main(float2 fragCoord) {
+    half4 a = iSrcA.eval(fragCoord);
+    half4 b = iSrcB.eval(fragCoord);
+
+    float2 uv = fragCoord / iResolution;
+
+    // Worst-case radius needed to cover the viewport from iCenter — pick
+    // the farthest corner so the reveal completes by progress == 1.
+    float r0 = distance(iCenter, float2(0.0, 0.0));
+    float r1 = distance(iCenter, float2(1.0, 0.0));
+    float r2 = distance(iCenter, float2(0.0, 1.0));
+    float r3 = distance(iCenter, float2(1.0, 1.0));
+    float maxR = max(max(r0, r1), max(r2, r3)) * 1.05;
+
+    float d = distance(uv, iCenter);
+    float radius = iProgress * maxR;
+
+    // Soft edge — 2.5 % of viewport — gives a bright ring around the wavefront.
+    float feather = 0.025;
+    float t = smoothstep(radius - feather, radius + feather, d);
+
+    // t==1 outside the iris (show A); t==0 inside (show B).
+    return mix(b, a, t);
+}

@@ -1,0 +1,10 @@
+{
+  "background_color": "#ffffff",
+  "description": "UnoAsteroids",
+  "display": "standalone",
+  "name": "UnoAsteroids",
+  "short_name": "UnoAsteroids",
+  "start_url": "/index.html",
+  "theme_color": "#ffffff",
+  "scope": "/"
+}

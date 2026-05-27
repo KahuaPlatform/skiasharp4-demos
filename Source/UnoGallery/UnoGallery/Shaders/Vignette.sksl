@@ -1,0 +1,23 @@
+// Radial darken applied as a colour-filter shader. Samples the existing canvas
+// content via the input child shader and multiplies by a radial falloff.
+//
+// Uniforms:
+//   iResolution - viewport in pixels
+//   iFalloff    - radius where vignette starts (0..1, in normalised coords)
+//   iDarkness   - how dark the corners get (0..1)
+// Child:
+//   iSrc        - the canvas content to dim
+
+uniform float2 iResolution;
+uniform float  iFalloff;
+uniform float  iDarkness;
+uniform shader iSrc;
+
+half4 main(float2 fragCoord) {
+    half4 src = iSrc.eval(fragCoord);
+    float2 uv = fragCoord / iResolution;
+    float d = distance(uv, float2(0.5, 0.5));
+    float v = smoothstep(iFalloff, 0.85, d);
+    float dim = 1.0 - v * iDarkness;
+    return half4(src.rgb * dim, src.a);
+}

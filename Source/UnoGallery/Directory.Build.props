@@ -1,0 +1,33 @@
+<Project>
+  <PropertyGroup>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+
+    <!--
+      SkiaSharp version. Default: 3.119.4 (stable, what Uno.Sdk would resolve
+      otherwise). Override at the command line to test newer previews:
+
+        dotnet build -p:SkiaSharpVersion=4.147.0-preview.3.1
+
+      When the version begins with "4.", SKIA_V4 is defined so individual call
+      sites can opt into v4-only APIs (e.g. SKRuntimeShaderBuilder, the new
+      SceneGraph) behind `#if SKIA_V4` while keeping the v3 path intact.
+
+      Caveat for 4.147.0-preview.3.1: SKRuntimeShaderBuilder and any uniforms
+      path through SKRuntimeEffectUniforms..ctor AVs in native code. The
+      parameterless ToColorFilter() route still works — that's what powers
+      Shaders/ToneGrade.sksl. See DESIGN.md for the full audit.
+    -->
+    <SkiaSharpVersion Condition="'$(SkiaSharpVersion)' == ''">3.119.4</SkiaSharpVersion>
+    <DefineConstants Condition="$(SkiaSharpVersion.StartsWith('4.'))">$(DefineConstants);SKIA_V4</DefineConstants>
+
+    <!--
+      Adding NoWarn to remove build warnings
+      NU1507: Warning when there are multiple package sources when using CPM with no source mapping
+      NETSDK1201: Warning that specifying RID won't create self containing app
+      PRI257: Ignore default language (en) not being one of the included resources (eg en-us, en-uk)
+    -->
+    <NoWarn>$(NoWarn);NU1507;NETSDK1201;PRI257</NoWarn>
+  </PropertyGroup>
+</Project>

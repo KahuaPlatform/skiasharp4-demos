@@ -1,0 +1,67 @@
+<Project Sdk="Uno.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net10.0-android;net10.0-ios;net10.0-browserwasm;net10.0-desktop</TargetFrameworks>
+
+    <OutputType>Exe</OutputType>
+    <UnoSingleProject>true</UnoSingleProject>
+
+    <!-- Display name -->
+    <ApplicationTitle>UnoGallery</ApplicationTitle>
+    <!-- App Identifier -->
+    <ApplicationId>com.companyname.unogallery</ApplicationId>
+    <!-- Versions -->
+    <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
+    <ApplicationVersion>1</ApplicationVersion>
+    <!-- Package Publisher -->
+    <ApplicationPublisher>UnoGallery</ApplicationPublisher>
+    <!-- Package Description -->
+    <Description>UnoGallery powered by Uno Platform.</Description>
+
+    <!--
+      SkiaSharp version is set in Directory.Build.props (defaults to 3.119.4).
+      Override with: dotnet build -p:SkiaSharpVersion=4.147.0-preview.3.1
+    -->
+
+    <!-- Required for the procedural-image generators that write pixel buffers directly. -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+
+    <!--
+      UnoFeatures are used to quickly add and manage features enabled for your app.
+      https://aka.platform.uno/singleproject-features
+    -->
+    <UnoFeatures>
+      SimpleTheme;
+      Hosting;
+      Toolkit;
+      Logging;
+      MVUX;
+      Configuration;
+      HttpKiota;
+      Serialization;
+      Localization;
+      Navigation;
+      ThemeService;
+      SkiaRenderer;
+    </UnoFeatures>
+  </PropertyGroup>
+
+  <!-- SKSL shader sources embedded so ShaderLibrary can compile them at runtime. -->
+  <ItemGroup>
+    <None Remove="Shaders\*.sksl" />
+    <EmbeddedResource Include="Shaders\*.sksl" />
+  </ItemGroup>
+
+  <!--
+    Windows-desktop-only packages (mic capture, perf counters). Versions
+    pinned in Directory.Packages.props per CPM rules. Each gets a
+    HAS_xxx define so the source files can compile out on other TFMs.
+  -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-desktop'">
+    <PackageReference Include="NAudio" />
+    <PackageReference Include="System.Diagnostics.PerformanceCounter" />
+  </ItemGroup>
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net10.0-desktop'">
+    <DefineConstants>$(DefineConstants);HAS_NAUDIO;HAS_PERFCOUNTERS</DefineConstants>
+  </PropertyGroup>
+
+</Project>

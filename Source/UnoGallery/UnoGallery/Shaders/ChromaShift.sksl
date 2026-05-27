@@ -1,0 +1,31 @@
+// Radial chromatic aberration. R and B channels are sampled from positions
+// offset along the radial direction from screen centre, scaled by distance
+// squared so the centre stays sharp and the corners get the most split.
+//
+// Uniforms:
+//   iAmount      0..1, how much each pixel's R/B offset (typical 0.005-0.03)
+//   iResolution  viewport in pixels
+// Child:
+//   iSrc         the canvas / picture being post-processed
+//
+// Entry: half4 main(float2 fragCoord)
+
+uniform float  iAmount;
+uniform float2 iResolution;
+uniform shader iSrc;
+
+half4 main(float2 fragCoord) {
+    float2 uv  = fragCoord / iResolution;
+    float2 dir = uv - float2(0.5);
+    float  dist = length(dir);
+
+    // Quadratic falloff in pixel space. Centre stays sharp, corners shift.
+    float2 offsetPx = dir * (dist * dist * iAmount * max(iResolution.x, iResolution.y));
+
+    half r = iSrc.eval(fragCoord + offsetPx).r;
+    half g = iSrc.eval(fragCoord).g;
+    half b = iSrc.eval(fragCoord - offsetPx).b;
+    half a = iSrc.eval(fragCoord).a;
+
+    return half4(r, g, b, a);
+}
