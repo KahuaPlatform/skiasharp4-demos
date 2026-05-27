@@ -11,10 +11,13 @@ namespace Lua.Game;
 public sealed class GameWorld
 {
     // --- World dimensions ---
+    // World space is a fixed 720×1280 coordinate system. The renderer letterboxes
+    // onto whatever canvas size it gets — this stays constant regardless of the
+    // actual window dimensions so gameplay coordinates are stable.
     public const float WorldW = 720f;
     public const float WorldH = 1280f;
-    public float Width  { get; private set; } = WorldW;
-    public float Height { get; private set; } = WorldH;
+    public float Width  => WorldW;
+    public float Height => WorldH;
 
     public Well Well { get; private set; }
 
@@ -57,10 +60,8 @@ public sealed class GameWorld
 
     public void Resize(float w, float h)
     {
-        // World coordinates stay fixed; the renderer letterboxes. Just record actual
-        // canvas dimensions so the renderer knows how to scale.
-        Width  = w;
-        Height = h;
+        // World coordinates are fixed at 720×1280; the renderer letterboxes onto
+        // whatever canvas size it receives. Nothing to record here.
     }
 
     // --- Input flags driven by MainPage ---
