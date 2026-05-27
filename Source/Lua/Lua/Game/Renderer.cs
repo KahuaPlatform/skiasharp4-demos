@@ -711,30 +711,6 @@ public static class Renderer
         DrawHudText(c, "PRESS SPACE OR CLICK TO START", cw / 2f, ch * 0.42f, SKTextAlign.Center, smallFont, HudColor);
         DrawHudText(c, "Left / Right or A / D  -  rotate around rim",          cw / 2f, ch * 0.48f, SKTextAlign.Center, instrFont, HudColor);
         DrawHudText(c, "Space  -  fire    Z  -  super zapper (2 per level)",   cw / 2f, ch * 0.52f, SKTextAlign.Center, instrFont, HudColor);
-
-        // Branding row near the bottom, above the marquee: Uno + Kahua side by side.
-        float brandY = ch * 0.78f;
-        c.Save();
-        c.Translate(cw / 2f - 60f, brandY);
-        c.Scale(2.6f);
-        DrawUnoLogo(c);
-        c.Restore();
-
-        if (KahuaSnowflakeImage is not null)
-        {
-            const float TargetSize = 110f;
-            float scale = TargetSize / MathF.Max(KahuaSnowflakeImage.Width, KahuaSnowflakeImage.Height);
-            float wpx = KahuaSnowflakeImage.Width  * scale;
-            float hpx = KahuaSnowflakeImage.Height * scale;
-            float kx = cw / 2f + 60f;
-            float ky = brandY - hpx / 2f + 30f;
-            c.DrawImage(KahuaSnowflakeImage,
-                new SKRect(kx, ky, kx + wpx, ky + hpx),
-                KahuaSnowflakeSampling);
-        }
-
-        using var brandFont = new SKFont(SKTypeface.FromFamilyName("Consolas"), 16);
-        DrawHudText(c, "POWERED BY UNO PLATFORM  +  KAHUA", cw / 2f, brandY + 90f, SKTextAlign.Center, brandFont, HudColor);
     }
 
     static void DrawUnoLogo(SKCanvas c)
