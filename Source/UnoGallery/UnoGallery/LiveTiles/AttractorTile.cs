@@ -46,9 +46,12 @@ public sealed class AttractorTile : ILiveTile
     readonly SKBitmap _bmp = new(new SKImageInfo(DensityRes, DensityRes, SKColorType.Rgba8888, SKAlphaType.Premul));
     static readonly SKSamplingOptions Sampling = new(SKCubicResampler.Mitchell);
     readonly Lock _lock = new();
-    readonly Thread _worker;
+    readonly Thread? _worker;
     volatile bool _alive = true;
     readonly System.Diagnostics.Stopwatch _sw = System.Diagnostics.Stopwatch.StartNew();
+
+    // WASM has no Thread support — step inline from Draw, using Draw's t for parameter morphing.
+    readonly bool _runInline;
 
     float _x = 0.1f, _y = 0.1f;
     int _currentIdx;
@@ -63,13 +66,17 @@ public sealed class AttractorTile : ILiveTile
 
     public AttractorTile()
     {
-        _worker = new Thread(WorkerLoop)
+        _runInline = OperatingSystem.IsBrowser();
+        if (!_runInline)
         {
-            IsBackground = true,
-            Name = "Attractor-Worker",
-            Priority = ThreadPriority.BelowNormal,
-        };
-        _worker.Start();
+            _worker = new Thread(WorkerLoop)
+            {
+                IsBackground = true,
+                Name = "Attractor-Worker",
+                Priority = ThreadPriority.BelowNormal,
+            };
+            _worker.Start();
+        }
     }
 
     void WorkerLoop()
@@ -78,35 +85,39 @@ public sealed class AttractorTile : ILiveTile
         {
             try
             {
-                float t = (float)_sw.Elapsed.TotalSeconds;
-                var (a, b, c, d) = CurrentParams(t);
-
-                lock (_lock)
-                {
-                    for (int i = 0; i < _density.Length; i++) _density[i] *= DensityDecay;
-
-                    const float Range = 2f;
-                    for (int i = 0; i < IterationsPerFrame; i++)
-                    {
-                        float nx = MathF.Sin(a * _y) + c * MathF.Cos(a * _x);
-                        float ny = MathF.Sin(b * _x) + d * MathF.Cos(b * _y);
-                        _x = nx; _y = ny;
-
-                        int dx = (int)((_x + Range) / (2f * Range) * DensityRes);
-                        int dy = (int)((_y + Range) / (2f * Range) * DensityRes);
-                        if ((uint)dx < DensityRes && (uint)dy < DensityRes)
-                            _density[dy * DensityRes + dx] += 1f;
-                    }
-                }
-
+                StepBatch((float)_sw.Elapsed.TotalSeconds);
                 Thread.Sleep(16); // ~60 batches/sec
             }
             catch { Thread.Sleep(100); }
         }
     }
 
+    void StepBatch(float t)
+    {
+        var (a, b, c, d) = CurrentParams(t);
+        lock (_lock)
+        {
+            for (int i = 0; i < _density.Length; i++) _density[i] *= DensityDecay;
+
+            const float Range = 2f;
+            for (int i = 0; i < IterationsPerFrame; i++)
+            {
+                float nx = MathF.Sin(a * _y) + c * MathF.Cos(a * _x);
+                float ny = MathF.Sin(b * _x) + d * MathF.Cos(b * _y);
+                _x = nx; _y = ny;
+
+                int dx = (int)((_x + Range) / (2f * Range) * DensityRes);
+                int dy = (int)((_y + Range) / (2f * Range) * DensityRes);
+                if ((uint)dx < DensityRes && (uint)dy < DensityRes)
+                    _density[dy * DensityRes + dx] += 1f;
+            }
+        }
+    }
+
     public void Draw(SKCanvas canvas, SKRect dest, float t)
     {
+        if (_runInline) StepBatch(t);
+
         // Snapshot peak + color-map the density into the bitmap. Lock briefly.
         lock (_lock)
         {

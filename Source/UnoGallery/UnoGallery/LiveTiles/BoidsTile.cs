@@ -27,8 +27,12 @@ public sealed class BoidsTile : ILiveTile
 
     readonly Boid[] _boids = new Boid[Count];
     readonly Lock _lock = new();
-    readonly Thread _worker;
+    readonly Thread? _worker;
     volatile bool _alive = true;
+
+    // WASM has no Thread support — step inline from Draw using a dt derived from t.
+    readonly bool _runInline;
+    float _inlineLast;
 
     public string Caption => "Boids";
 
@@ -49,13 +53,17 @@ public sealed class BoidsTile : ILiveTile
             _boids[i].ColorIdx = 1 + rng.Next(Palette.Length - 1);
         }
 
-        _worker = new Thread(WorkerLoop)
+        _runInline = OperatingSystem.IsBrowser();
+        if (!_runInline)
         {
-            IsBackground = true,
-            Name = "Boids-Worker",
-            Priority = ThreadPriority.BelowNormal,
-        };
-        _worker.Start();
+            _worker = new Thread(WorkerLoop)
+            {
+                IsBackground = true,
+                Name = "Boids-Worker",
+                Priority = ThreadPriority.BelowNormal,
+            };
+            _worker.Start();
+        }
     }
 
     void WorkerLoop()
@@ -79,6 +87,13 @@ public sealed class BoidsTile : ILiveTile
 
     public void Draw(SKCanvas canvas, SKRect dest, float t)
     {
+        if (_runInline)
+        {
+            float dt = MathF.Min(0.05f, MathF.Max(0f, t - _inlineLast));
+            _inlineLast = t;
+            lock (_lock) Step(dt);
+        }
+
         using var bgPaint = new SKPaint { Color = Palette[0] };
         canvas.DrawRect(dest, bgPaint);
 

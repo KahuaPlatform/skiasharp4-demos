@@ -26,9 +26,13 @@ public sealed class CurlNoiseTile : ILiveTile
     SKBitmap? _canvas;
     int _canvasW, _canvasH;
     readonly Lock _lock = new();
-    readonly Thread _worker;
+    readonly Thread? _worker;
     volatile bool _alive = true;
     readonly System.Diagnostics.Stopwatch _sw = System.Diagnostics.Stopwatch.StartNew();
+
+    // WASM has no Thread support — fall back to stepping inline from Draw.
+    readonly bool _runInline;
+    float _inlineLast;
 
     public string Caption => "CurlNoise";
 
@@ -47,13 +51,17 @@ public sealed class CurlNoiseTile : ILiveTile
             _particles[i].ColorIdx = 1 + rng.Next(Palette.Length - 1);
         }
 
-        _worker = new Thread(WorkerLoop)
+        _runInline = OperatingSystem.IsBrowser();
+        if (!_runInline)
         {
-            IsBackground = true,
-            Name = "CurlNoise-Worker",
-            Priority = ThreadPriority.BelowNormal,
-        };
-        _worker.Start();
+            _worker = new Thread(WorkerLoop)
+            {
+                IsBackground = true,
+                Name = "CurlNoise-Worker",
+                Priority = ThreadPriority.BelowNormal,
+            };
+            _worker.Start();
+        }
     }
 
     void WorkerLoop()
@@ -66,38 +74,48 @@ public sealed class CurlNoiseTile : ILiveTile
                 float now = (float)_sw.Elapsed.TotalSeconds;
                 float dt = MathF.Min(0.05f, now - last);
                 last = now;
-
-                lock (_lock)
-                {
-                    for (int i = 0; i < ParticleCount; i++)
-                    {
-                        ref var p = ref _particles[i];
-                        const float h = 0.01f;
-                        float n_yp = Noise(p.Pos.X, p.Pos.Y + h, now * TimeWarp);
-                        float n_yn = Noise(p.Pos.X, p.Pos.Y - h, now * TimeWarp);
-                        float n_xp = Noise(p.Pos.X + h, p.Pos.Y, now * TimeWarp);
-                        float n_xn = Noise(p.Pos.X - h, p.Pos.Y, now * TimeWarp);
-
-                        var velocity = new Vector2(
-                            (n_yp - n_yn) / (2f * h),
-                            -(n_xp - n_xn) / (2f * h));
-                        // Use a fixed scale factor — we don't know canvas dims here, but
-                        // the speed-to-canvas ratio is computed against a typical edge.
-                        p.Pos += velocity * (Speed / 256f) * dt;
-
-                        if (p.Pos.X < 0) p.Pos.X += 1f; else if (p.Pos.X > 1f) p.Pos.X -= 1f;
-                        if (p.Pos.Y < 0) p.Pos.Y += 1f; else if (p.Pos.Y > 1f) p.Pos.Y -= 1f;
-                    }
-                }
-
+                StepParticles(now, dt);
                 Thread.Sleep(16); // ~60 Hz particle updates
             }
             catch { Thread.Sleep(50); }
         }
     }
 
+    void StepParticles(float now, float dt)
+    {
+        lock (_lock)
+        {
+            for (int i = 0; i < ParticleCount; i++)
+            {
+                ref var p = ref _particles[i];
+                const float h = 0.01f;
+                float n_yp = Noise(p.Pos.X, p.Pos.Y + h, now * TimeWarp);
+                float n_yn = Noise(p.Pos.X, p.Pos.Y - h, now * TimeWarp);
+                float n_xp = Noise(p.Pos.X + h, p.Pos.Y, now * TimeWarp);
+                float n_xn = Noise(p.Pos.X - h, p.Pos.Y, now * TimeWarp);
+
+                var velocity = new Vector2(
+                    (n_yp - n_yn) / (2f * h),
+                    -(n_xp - n_xn) / (2f * h));
+                // Use a fixed scale factor — we don't know canvas dims here, but
+                // the speed-to-canvas ratio is computed against a typical edge.
+                p.Pos += velocity * (Speed / 256f) * dt;
+
+                if (p.Pos.X < 0) p.Pos.X += 1f; else if (p.Pos.X > 1f) p.Pos.X -= 1f;
+                if (p.Pos.Y < 0) p.Pos.Y += 1f; else if (p.Pos.Y > 1f) p.Pos.Y -= 1f;
+            }
+        }
+    }
+
     public void Draw(SKCanvas canvas, SKRect dest, float t)
     {
+        if (_runInline)
+        {
+            float dt = MathF.Min(0.05f, MathF.Max(0f, t - _inlineLast));
+            _inlineLast = t;
+            StepParticles(t, dt);
+        }
+
         // (Re)create the offscreen accumulator if the tile size changes.
         int targetW = (int)MathF.Ceiling(dest.Width);
         int targetH = (int)MathF.Ceiling(dest.Height);

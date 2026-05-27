@@ -33,8 +33,11 @@ public sealed class ReactionDiffusionTile : ILiveTile
     readonly SKBitmap _bmp = new(new SKImageInfo(W, H, SKColorType.Rgba8888, SKAlphaType.Premul));
     int _stepsTotal;
     readonly Lock _lock = new();
-    readonly Thread _worker;
+    readonly Thread? _worker;
     volatile bool _alive = true;
+
+    // WASM has no Thread support — run the substep batch inline from Draw.
+    readonly bool _runInline;
 
     public string Caption => "Reaction";
 
@@ -47,13 +50,17 @@ public sealed class ReactionDiffusionTile : ILiveTile
     public ReactionDiffusionTile()
     {
         Seed();
-        _worker = new Thread(WorkerLoop)
+        _runInline = OperatingSystem.IsBrowser();
+        if (!_runInline)
         {
-            IsBackground = true,
-            Name = "RD-Worker",
-            Priority = ThreadPriority.BelowNormal,
-        };
-        _worker.Start();
+            _worker = new Thread(WorkerLoop)
+            {
+                IsBackground = true,
+                Name = "RD-Worker",
+                Priority = ThreadPriority.BelowNormal,
+            };
+            _worker.Start();
+        }
     }
 
     void WorkerLoop()
@@ -64,15 +71,7 @@ public sealed class ReactionDiffusionTile : ILiveTile
         {
             try
             {
-                lock (_lock)
-                {
-                    for (int s = 0; s < SubstepsPerFrame; s++) Step();
-                    if (_stepsTotal > 12000)
-                    {
-                        Seed();
-                        _stepsTotal = 0;
-                    }
-                }
+                StepBatch();
                 Thread.Sleep(8); // ~120 batches/sec ceiling
             }
             catch (Exception ex)
@@ -83,8 +82,23 @@ public sealed class ReactionDiffusionTile : ILiveTile
         }
     }
 
+    void StepBatch()
+    {
+        lock (_lock)
+        {
+            for (int s = 0; s < SubstepsPerFrame; s++) Step();
+            if (_stepsTotal > 12000)
+            {
+                Seed();
+                _stepsTotal = 0;
+            }
+        }
+    }
+
     public void Draw(SKCanvas canvas, SKRect dest, float t)
     {
+        if (_runInline) StepBatch();
+
         lock (_lock)
         {
             // Render B concentration to bitmap under lock so the worker can't

@@ -23,8 +23,12 @@ public sealed class ConwayTile : ILiveTile
     readonly SKBitmap _bmp = new(new SKImageInfo(W, H, SKColorType.Rgba8888, SKAlphaType.Premul));
     int _generation;
     readonly Lock _lock = new();
-    readonly Thread _worker;
+    readonly Thread? _worker;
     volatile bool _alive = true;
+
+    // WASM has no Thread support — step inline from Draw, gated at StepInterval.
+    readonly bool _runInline;
+    float _inlineLastStep;
 
     uint _alivePack;
     uint _deadPack;
@@ -45,13 +49,17 @@ public sealed class ConwayTile : ILiveTile
         for (int i = 0; i < _cur.Length; i++)
             _cur[i] = (byte)(rng.NextDouble() < 0.32 ? 1 : 0);
 
-        _worker = new Thread(WorkerLoop)
+        _runInline = OperatingSystem.IsBrowser();
+        if (!_runInline)
         {
-            IsBackground = true,
-            Name = "Conway-Worker",
-            Priority = ThreadPriority.BelowNormal,
-        };
-        _worker.Start();
+            _worker = new Thread(WorkerLoop)
+            {
+                IsBackground = true,
+                Name = "Conway-Worker",
+                Priority = ThreadPriority.BelowNormal,
+            };
+            _worker.Start();
+        }
     }
 
     void WorkerLoop()
@@ -70,6 +78,12 @@ public sealed class ConwayTile : ILiveTile
 
     public void Draw(SKCanvas canvas, SKRect dest, float t)
     {
+        if (_runInline && t - _inlineLastStep >= StepInterval)
+        {
+            _inlineLastStep = t;
+            lock (_lock) Step();
+        }
+
         lock (_lock)
         {
             unsafe
