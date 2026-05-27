@@ -1,0 +1,10 @@
+{
+  "background_color": "#ffffff",
+  "description": "UnoGalaga",
+  "display": "standalone",
+  "name": "UnoGalaga",
+  "short_name": "UnoGalaga",
+  "start_url": "/index.html",
+  "theme_color": "#ffffff",
+  "scope": "/"
+}

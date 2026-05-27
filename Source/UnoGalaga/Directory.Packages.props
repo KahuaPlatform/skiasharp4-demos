@@ -5,7 +5,7 @@
     See https://aka.platform.uno/using-uno-sdk for more information.
     See https://aka.platform.uno/using-uno-sdk#implicit-packages for more information regarding the Implicit Packages.
   -->
-  <!-- Windows-desktop-only audio package — referenced conditionally in UnoAsteroids.csproj. -->
+  <!-- Windows-desktop-only audio package — referenced conditionally in UnoGalaga.csproj. -->
   <ItemGroup>
     <PackageVersion Include="NAudio" Version="2.2.1" />
   </ItemGroup>

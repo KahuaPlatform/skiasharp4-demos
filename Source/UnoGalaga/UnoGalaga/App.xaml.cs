@@ -1,9 +1,9 @@
 using System;
 using Microsoft.Extensions.Logging;
 using Uno.Resizetizer;
-using UnoAsteroids.Game;
+using UnoGalaga.Game;
 
-namespace UnoAsteroids;
+namespace UnoGalaga;
 
 public partial class App : Application
 {
@@ -25,8 +25,19 @@ public partial class App : Application
         MainWindow.UseStudio();
 #endif
 
-        AudioEngine.Init();
+        // Portrait window matches the world's 720×1280 (9:16) coordinate space —
+        // kills the letterbox bars on landscape desktop monitors. Browser-wasm
+        // ignores this; the page sizes itself.
+        if (!OperatingSystem.IsBrowser())
+        {
+            try
+            {
+                MainWindow.AppWindow?.Resize(new Windows.Graphics.SizeInt32 { Width = 810, Height = 1440 });
+            }
+            catch { /* desktop targets that don't expose AppWindow — best-effort */ }
+        }
 
+        AudioEngine.Init();
 
         // Do not repeat app initialization when the Window already has content,
         // just ensure that the window is active

@@ -7,16 +7,16 @@
     <SkiaSharpVersion>4.147.0-preview.3.1</SkiaSharpVersion>
 
     <!-- Display name -->
-    <ApplicationTitle>UnoAsteroids</ApplicationTitle>
+    <ApplicationTitle>UnoGalaga</ApplicationTitle>
     <!-- App Identifier -->
-    <ApplicationId>com.companyname.unoasteroids</ApplicationId>
+    <ApplicationId>com.companyname.unogalaga</ApplicationId>
     <!-- Versions -->
     <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
     <ApplicationVersion>1</ApplicationVersion>
     <!-- Package Publisher -->
-    <ApplicationPublisher>UnoAsteroids</ApplicationPublisher>
+    <ApplicationPublisher>UnoGalaga</ApplicationPublisher>
     <!-- Package Description -->
-    <Description>UnoAsteroids powered by Uno Platform.</Description>
+    <Description>UnoGalaga powered by Uno Platform.</Description>
 
     <!--
       UnoFeatures are used to quickly add and manage features enabled for your app.
@@ -26,6 +26,11 @@
       SkiaRenderer;
     </UnoFeatures>
   </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Brand-mark assets embedded for direct SkiaSharp rendering by Renderer.cs -->
+    <EmbeddedResource Include="Assets\Icons\kahua_snowflake.png" />
+  </ItemGroup>
 
   <!-- NAudio is Windows-only; conditionally referenced for the desktop TFM,
        with HAS_NAUDIO compile constant so AudioEngine no-ops on wasm. -->

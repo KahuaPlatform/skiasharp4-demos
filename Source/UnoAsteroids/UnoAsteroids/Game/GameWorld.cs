@@ -113,10 +113,12 @@ public class GameWorld
         };
         Bullets.Add(b);
         Ship.ShootCooldown = 0.18f;
+        AudioEngine.PlayShoot();
     }
 
     public void HyperSpace()
     {
+        AudioEngine.PlayHyperspace();
         Ship.Position = new Vec2((float)_rng.NextDouble() * Width, (float)_rng.NextDouble() * Height);
         Ship.Velocity = Vec2.Zero;
         // 1 in 8 chance of bad hyperspace
@@ -200,6 +202,31 @@ public class GameWorld
                 Ship.InvincibleTime = 2.5f;
                 Ship.Alive = true;
             }
+        }
+
+        UpdateAudioState();
+    }
+
+    // Drives Start/Stop of the looping AudioEngine voices in response to game state.
+    private bool _prevThrustOn;
+    private bool _prevSaucerActive;
+
+    private void UpdateAudioState()
+    {
+        bool thrustOn = Ship.Alive && Ship.ThrustOn && Mode != GameMode.GameOver;
+        if (thrustOn != _prevThrustOn)
+        {
+            if (thrustOn) AudioEngine.StartThrust();
+            else          AudioEngine.StopThrust();
+            _prevThrustOn = thrustOn;
+        }
+
+        bool saucerActive = Saucer != null;
+        if (saucerActive != _prevSaucerActive)
+        {
+            if (saucerActive) AudioEngine.StartSaucer(Saucer!.Large);
+            else              AudioEngine.StopSaucer();
+            _prevSaucerActive = saucerActive;
         }
     }
 
@@ -435,6 +462,7 @@ public class GameWorld
             var sp = 60f + (float)_rng.NextDouble() * 140f;
             Particles.Add(new Particle(pos, Vec2.FromAngle(ang, sp), 0.5f + (float)_rng.NextDouble() * 0.4f));
         }
+        AudioEngine.PlayExplosion();
     }
 
     private static float Distance(Vec2 a, Vec2 b)
