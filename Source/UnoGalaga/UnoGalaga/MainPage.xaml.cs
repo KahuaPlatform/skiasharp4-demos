@@ -78,6 +78,14 @@ public sealed partial class MainPage : Page
 
     void OnKeyDown(object sender, KeyRoutedEventArgs e)
     {
+        // Attract loop: any key exits back to the title screen.
+        if (_world.Mode == GameMode.Attract)
+        {
+            _world.ReturnToTitle();
+            e.Handled = true;
+            return;
+        }
+
         switch (e.Key)
         {
             case VirtualKey.Left:
@@ -116,7 +124,11 @@ public sealed partial class MainPage : Page
     void OnPointerPressed(object sender, PointerRoutedEventArgs e)
     {
         Focus(FocusState.Pointer);
-        if (_world.Mode == GameMode.Title || _world.Mode == GameMode.GameOver)
+        if (_world.Mode == GameMode.Attract)
+        {
+            _world.ReturnToTitle();
+        }
+        else if (_world.Mode == GameMode.Title || _world.Mode == GameMode.GameOver)
         {
             _world.StartGame();
         }

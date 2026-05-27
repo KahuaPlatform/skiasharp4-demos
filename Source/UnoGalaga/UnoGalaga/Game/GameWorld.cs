@@ -1,6 +1,6 @@
 namespace UnoGalaga.Game;
 
-public enum GameMode { Title, Playing, GameOver }
+public enum GameMode { Title, Playing, GameOver, Attract }
 public enum WaveState { Spawning, Settling, Attacking, Placard, Cleared }
 
 // Wave choreography skeleton. Spawns a 4×6 formation enemy-by-enemy on
@@ -13,9 +13,10 @@ public class GameWorld
     public float Height = 1280f;
 
     public Player Player = new();
-    public List<Enemy>    Enemies   = new();
-    public List<Bullet>   Bullets   = new();
-    public List<Particle> Particles = new();
+    public List<Enemy>       Enemies     = new();
+    public List<Bullet>      Bullets     = new();
+    public List<Particle>    Particles   = new();
+    public List<ScorePopup>  ScorePopups = new();
 
     public GameMode  Mode      = GameMode.Title;
     public WaveState WaveState = WaveState.Spawning;
@@ -89,14 +90,26 @@ public class GameWorld
     float _deathTimer;
     float _placardTimer;
     float _flybyTimer;           // seconds until next mystery flyby attempt
+    float _titleIdleTimer;       // seconds spent idle on title screen (triggers attract mode)
     readonly Random _rng = new(42);
 
+    const float AttractIdleThreshold = 10f;  // seconds on title before attract starts
     const float FlybyInterval     = 28f;  // average gap between flybys
     const float FlybyDuration     = 6f;   // seconds to traverse the screen
     const int   FlybyKillBonus    = 1500; // score for shooting down the mystery mothership
 
+    // --- Tractor beam / capture set-piece ---
+    const float CaptureChance         = 0.22f;  // chance per pair-dive to trigger a beam instead
+    const float BeamSeekDuration      = 1.5f;
+    const float BeamActiveDuration    = 2.0f;
+    const float ReturnCaptureDuration = 2.5f;
+    const float BeamTopHalfWidth      = 16f;
+    const float BeamBottomHalfWidth   = 72f;
+    const int   RescueBonus           = 1000;
+
     public GameWorld()
     {
+        HighScore = HighScoreStore.Load();
         ResetForTitle();
     }
 
@@ -108,21 +121,71 @@ public class GameWorld
 
     public void StartGame()
     {
-        Mode  = GameMode.Playing;
+        StartGameInternal(GameMode.Playing);
+    }
+
+    public void StartAttract()
+    {
+        StartGameInternal(GameMode.Attract);
+    }
+
+    void StartGameInternal(GameMode mode)
+    {
+        Mode  = mode;
         Stage = 1;
         IsChallengeStage = false;
         Score = 0;
+        _titleIdleTimer = 0f;
         Enemies.Clear();
         Bullets.Clear();
         Particles.Clear();
+        ScorePopups.Clear();
         Player = new Player
         {
             Position = new Vec2(Width / 2f, Height - 80f),
             InvincibleTime = 1.5f,
+            Lives = mode == GameMode.Attract ? 9999 : 3,  // attract loop plays indefinitely
         };
         WaveTime    = 0f;
-        _flybyTimer = 6f;  // first flyby ~6s into the attacking phase so testers see it quickly
+        _flybyTimer = 6f;
         StartNormalWave();
+    }
+
+    public void ReturnToTitle()
+    {
+        ResetForTitle();
+    }
+
+    // Simple AI for the attract loop: home in on the lowest-Y alive enemy and fire when
+    // roughly aligned. Good enough to look like reasonable play, not so good that the
+    // demo never has on-screen action.
+    void UpdateAttractAI()
+    {
+        if (!Player.Alive) { MovingLeft = false; MovingRight = false; return; }
+
+        Enemy? target = null;
+        float bestY = -1f;
+        foreach (var e in Enemies)
+        {
+            if (!e.Alive) continue;
+            if (e.State == EnemyState.Rejoining) continue;  // unkillable mid-rejoin
+            if (e.Position.Y > bestY) { bestY = e.Position.Y; target = e; }
+        }
+
+        if (target != null)
+        {
+            float dx = target.Position.X - Player.Position.X;
+            MovingLeft  = dx < -8f;
+            MovingRight = dx >  8f;
+            if (MathF.Abs(dx) < 24f) FireBullet();
+        }
+        else
+        {
+            MovingLeft = false;
+            MovingRight = false;
+            // No target — fire occasionally just to keep things lively.
+            if (_rng.NextDouble() < 0.05) FireBullet();
+        }
     }
 
     void StartNormalWave()
@@ -156,6 +219,14 @@ public class GameWorld
 
     static bool IsChallengeStageNumber(int stage) => stage % 4 == 3;  // stages 3, 7, 11, ...
 
+    // --- Stage-scaled difficulty ---
+    // Each value ramps with Stage and bottoms out at a reasonable floor so the demo
+    // stays playable indefinitely without becoming impossible.
+    float CurrentPairAttackInterval() => MathF.Max(0.90f, PairAttackInterval - (Stage - 1) * 0.10f);
+    float CurrentEnemyFireMin()       => MathF.Max(0.18f, EnemyFireMin       - (Stage - 1) * 0.025f);
+    float CurrentEnemyFireMax()       => MathF.Max(0.45f, EnemyFireMax       - (Stage - 1) * 0.05f);
+    float CurrentDiveDuration()       => MathF.Max(1.80f, DiveDuration       - (Stage - 1) * 0.08f);
+
     public void ResetForTitle()
     {
         Mode = GameMode.Title;
@@ -163,6 +234,8 @@ public class GameWorld
         Enemies.Clear();
         Bullets.Clear();
         Particles.Clear();
+        ScorePopups.Clear();
+        _titleIdleTimer = 0f;
         Player = new Player
         {
             Position = new Vec2(Width / 2f, Height - 80f),
@@ -177,7 +250,9 @@ public class GameWorld
         {
             int active = 0;
             foreach (var b in Bullets) if (b.Alive && b.FromPlayer) active++;
-            if (active >= MaxPlayerBullets) return;
+            // Dual-fighter doubles the cap so each ship gets its own pair.
+            int cap = Player.HasWingman ? MaxPlayerBullets * 2 : MaxPlayerBullets;
+            if (active >= cap) return;
         }
 
         Bullets.Add(new Bullet
@@ -186,6 +261,16 @@ public class GameWorld
             Velocity = new Vec2(0f, -640f),
             FromPlayer = true,
         });
+        // Dual-fighter: second bullet from the wingman, side by side.
+        if (Player.HasWingman)
+        {
+            Bullets.Add(new Bullet
+            {
+                Position = new Vec2(Player.Position.X + Player.WingmanOffsetX, Player.Position.Y - Player.Radius - 4f),
+                Velocity = new Vec2(0f, -640f),
+                FromPlayer = true,
+            });
+        }
         Player.ShootCooldown = ShootInterval;
         AudioEngine.PlayShoot();
     }
@@ -193,6 +278,17 @@ public class GameWorld
     public void Update(float dt)
     {
         WaveTime += dt;
+        if (Score > HighScore) HighScore = Score;
+
+        // Title-idle: if no one starts a game for AttractIdleThreshold seconds, kick into
+        // a self-playing attract loop so the demo never sits static between presenters.
+        if (Mode == GameMode.Title)
+        {
+            _titleIdleTimer += dt;
+            if (_titleIdleTimer >= AttractIdleThreshold) StartAttract();
+            return;
+        }
+        if (Mode == GameMode.Attract) UpdateAttractAI();
         UpdatePlayer(dt);
 
         switch (WaveState)
@@ -206,12 +302,35 @@ public class GameWorld
         UpdateEnemyPositions(dt);
         UpdateBullets(dt);
         UpdateParticles(dt);
+        UpdateScorePopups(dt);
 
         CheckCollisions();
 
         Bullets.RemoveAll(b => !b.Alive);
         Enemies.RemoveAll(e => !e.Alive);
         Particles.RemoveAll(p => p.Lifetime <= 0f);
+        ScorePopups.RemoveAll(p => p.Lifetime <= 0f);
+    }
+
+    void UpdateScorePopups(float dt)
+    {
+        foreach (var p in ScorePopups)
+        {
+            p.Lifetime -= dt;
+            p.Position = new Vec2(p.Position.X, p.Position.Y - 40f * dt);  // float upward
+        }
+    }
+
+    void SpawnScorePopup(Vec2 pos, int value, uint color)
+    {
+        ScorePopups.Add(new ScorePopup
+        {
+            Position = pos,
+            Value    = value,
+            Lifetime = 1.0f,
+            MaxLife  = 1.0f,
+            Color    = color,
+        });
     }
 
     // --- Collisions ---
@@ -239,38 +358,49 @@ public class GameWorld
                 else
                 {
                     score = ScoreForKind(enemy.Kind);
-                    if (enemy.State == EnemyState.Diving) score *= 2;  // Galaga-style dive bonus
+                    // Galaga-style 2x dive bonus — any of the active-attack states count.
+                    if (enemy.State == EnemyState.Diving ||
+                        enemy.State == EnemyState.BeamSeek ||
+                        enemy.State == EnemyState.BeamActive ||
+                        enemy.State == EnemyState.ReturnWithCapture)
+                    {
+                        score *= 2;
+                    }
                 }
                 Score += score;
                 if (IsChallengeStage && enemy.State != EnemyState.Flyby) _challengeKills++;
-                SpawnExplosion(enemy.Position, ExplosionColors[Math.Clamp(enemy.Kind, 0, ExplosionColors.Length - 1)]);
+                uint explosionColor = ExplosionColors[Math.Clamp(enemy.Kind, 0, ExplosionColors.Length - 1)];
+                SpawnExplosion(enemy.Position, explosionColor);
+                SpawnScorePopup(enemy.Position, score, explosionColor);
                 AudioEngine.PlayExplosion();
+                // Killing a boss with a captive triggers the dual-fighter rescue.
+                if (enemy.HasCaptive) OnRescue(enemy);
                 break;
             }
         }
 
-        // Diving enemies vs the player. Player is immune during the brief death+respawn flicker.
+        // Diving enemies vs the player (or wingman, when dual-fighter is active).
         if (Player.Alive && Player.InvincibleTime <= 0f)
         {
             foreach (var enemy in Enemies)
             {
                 if (!enemy.Alive || enemy.State != EnemyState.Diving) continue;
-                if (!CirclesOverlap(enemy.Position, enemy.Radius, Player.Position, Player.Radius)) continue;
+                if (!HitsPlayerOrWingman(enemy.Position, enemy.Radius)) continue;
 
-                enemy.Alive   = false;
+                enemy.Alive = false;
                 KillPlayer(enemyKind: enemy.Kind);
                 SpawnExplosion(enemy.Position, ExplosionColors[Math.Clamp(enemy.Kind, 0, ExplosionColors.Length - 1)]);
                 break;
             }
         }
 
-        // Enemy bullets vs the player.
+        // Enemy bullets vs the player (or wingman).
         if (Player.Alive && Player.InvincibleTime <= 0f)
         {
             foreach (var bullet in Bullets)
             {
                 if (!bullet.Alive || bullet.FromPlayer) continue;
-                if (!CirclesOverlap(bullet.Position, bullet.Radius, Player.Position, Player.Radius)) continue;
+                if (!HitsPlayerOrWingman(bullet.Position, bullet.Radius)) continue;
 
                 bullet.Alive = false;
                 KillPlayer(enemyKind: -1);
@@ -279,8 +409,30 @@ public class GameWorld
         }
     }
 
+    bool HitsPlayerOrWingman(Vec2 pos, float radius)
+    {
+        if (CirclesOverlap(pos, radius, Player.Position, Player.Radius)) return true;
+        if (Player.HasWingman)
+        {
+            var wing = new Vec2(Player.Position.X + Player.WingmanOffsetX, Player.Position.Y);
+            if (CirclesOverlap(pos, radius, wing, Player.Radius)) return true;
+        }
+        return false;
+    }
+
     void KillPlayer(int enemyKind)
     {
+        // Dual-fighter: first hit blows up the wingman; the next one kills the player.
+        if (Player.HasWingman)
+        {
+            Player.HasWingman = false;
+            var wingPos = new Vec2(Player.Position.X + Player.WingmanOffsetX, Player.Position.Y);
+            SpawnExplosion(wingPos, PlayerExplosionColor, count: 14);
+            AudioEngine.PlayExplosion();
+            Player.InvincibleTime = 0.8f;  // brief grace flicker
+            return;
+        }
+
         Player.Alive = false;
         Player.Lives = Math.Max(0, Player.Lives - 1);
         _deathTimer  = DeathDelay;
@@ -379,7 +531,7 @@ public class GameWorld
         if (_attackTimer <= 0f)
         {
             LaunchPairDive();
-            _attackTimer = PairAttackInterval;
+            _attackTimer = CurrentPairAttackInterval();
         }
 
         // Mystery flyby — periodic bonus target traversing the top of the screen.
@@ -561,6 +713,33 @@ public class GameWorld
         var first = pool[_rng.Next(pool.Count)];
         pool.Remove(first);
 
+        // Tractor-beam attempt: if the first picked enemy is a high-tier (boss/mothership/
+        // snowflake) and no other boss is already mid-capture, roll the capture die.
+        bool isHighTier = first.Kind >= 3;
+        bool anyBeam = false;
+        foreach (var e in Enemies)
+        {
+            if (e.State is EnemyState.BeamSeek or EnemyState.BeamActive or EnemyState.ReturnWithCapture)
+            {
+                anyBeam = true; break;
+            }
+        }
+        if (isHighTier && !anyBeam && _rng.NextDouble() < CaptureChance)
+        {
+            StartBeamSeek(first);
+            // Partner still does a normal dive (the pair feel stays).
+            float centerX0 = Width / 2f;
+            Enemy partner = pool[0];
+            foreach (var c in pool)
+            {
+                bool firstLeft = first.SlotPos.X < centerX0;
+                bool cRight    = c.SlotPos.X >= centerX0;
+                if (firstLeft == cRight) { partner = c; break; }
+            }
+            LaunchDive(partner);
+            return;
+        }
+
         // Prefer a mirror partner on the opposite side of the screen for the pincer feel.
         float centerX = Width / 2f;
         Enemy second = pool[0];
@@ -575,15 +754,28 @@ public class GameWorld
         LaunchDive(second);
     }
 
+    void StartBeamSeek(Enemy boss)
+    {
+        boss.State        = EnemyState.BeamSeek;
+        boss.PathT        = 0f;
+        boss.PathDuration = BeamSeekDuration;
+        boss.BeamFromPos  = boss.Position;
+        // Hover directly above the player at roughly 1/3 of the world height.
+        boss.BeamHoverPos = new Vec2(Player.Position.X, Height * 0.35f);
+        AudioEngine.PlayDive();  // reuse dive whoosh for beam approach
+    }
+
     void LaunchDive(Enemy e)
     {
         float centerX = Width / 2f;
+        float fireMin = CurrentEnemyFireMin();
+        float fireMax = CurrentEnemyFireMax();
         e.State          = EnemyState.Diving;
         e.PathT          = 0f;
-        e.PathDuration   = DiveDuration;
+        e.PathDuration   = CurrentDiveDuration();
         e.DiveCurlSign   = e.SlotPos.X < centerX ? -1f : +1f;
         e.DiveTarget     = Player.Position;
-        e.NextFireTime   = WaveTime + EnemyFireMin + (float)_rng.NextDouble() * (EnemyFireMax - EnemyFireMin);
+        e.NextFireTime   = WaveTime + fireMin + (float)_rng.NextDouble() * (fireMax - fireMin);
         AudioEngine.PlayDive();
     }
 
@@ -673,7 +865,9 @@ public class GameWorld
                         if (WaveTime >= e.NextFireTime && e.Position.Y < Player.Position.Y - 40f)
                         {
                             FireEnemyBullet(e);
-                            e.NextFireTime = WaveTime + EnemyFireMin + (float)_rng.NextDouble() * (EnemyFireMax - EnemyFireMin);
+                            float fmin = CurrentEnemyFireMin();
+                            float fmax = CurrentEnemyFireMax();
+                            e.NextFireTime = WaveTime + fmin + (float)_rng.NextDouble() * (fmax - fmin);
                         }
                     }
                     break;
@@ -703,11 +897,125 @@ public class GameWorld
                     else
                     {
                         e.Position = Paths.FlybyPath(e.FlybyFromLeft, Width, e.PathT);
-                        e.Rotation = 0f;  // logos stay upright; rotation suppressed in renderer for kinds 4-5 anyway
+                        e.Rotation = 0f;
+                    }
+                    break;
+
+                case EnemyState.BeamSeek:
+                    e.PathT += dt / e.PathDuration;
+                    if (e.PathT >= 1f)
+                    {
+                        e.Position     = e.BeamHoverPos;
+                        e.State        = EnemyState.BeamActive;
+                        e.PathT        = 0f;
+                        e.PathDuration = BeamActiveDuration;
+                        e.Rotation     = MathF.PI;  // face down
+                    }
+                    else
+                    {
+                        // Smooth ease-out toward hover position.
+                        float u = 1f - (1f - e.PathT) * (1f - e.PathT);
+                        e.Position = e.BeamFromPos + (e.BeamHoverPos - e.BeamFromPos) * u;
+                        e.Rotation = MathF.PI;
+                    }
+                    break;
+
+                case EnemyState.BeamActive:
+                    e.PathT += dt / e.PathDuration;
+                    e.Position = e.BeamHoverPos;
+                    e.Rotation = MathF.PI;
+
+                    // Tractor-beam contact: is the player inside the downward beam trapezoid?
+                    if (Player.Alive && _capturedByEnemy == null && BeamCatchesPlayer(e))
+                    {
+                        // Capture: player is tractored up to the boss. We'll resolve the
+                        // life loss when the boss completes ReturnWithCapture (or grant
+                        // a wingman if the boss is shot down first).
+                        Player.Alive = false;
+                        e.HasCaptive = true;
+                        _capturedByEnemy = e;
+                    }
+
+                    if (e.PathT >= 1f)
+                    {
+                        // End of beam window — transition out.
+                        if (e.HasCaptive)
+                        {
+                            e.State = EnemyState.ReturnWithCapture;
+                            e.PathT = 0f;
+                            e.PathDuration = ReturnCaptureDuration;
+                            e.BeamFromPos = e.Position;
+                        }
+                        else
+                        {
+                            // No capture — rejoin formation like a missed dive.
+                            e.State = EnemyState.Rejoining;
+                            e.PathT = 0f;
+                            e.PathDuration = RejoinDuration;
+                            e.DiveCurlSign = e.SlotPos.X < Width / 2f ? -1f : +1f;
+                        }
+                    }
+                    break;
+
+                case EnemyState.ReturnWithCapture:
+                    e.PathT += dt / e.PathDuration;
+                    if (e.PathT >= 1f)
+                    {
+                        // Made it back with the captive — captive is officially lost.
+                        e.Position = e.SlotPos;
+                        e.State    = EnemyState.InFormation;
+                        e.Rotation = MathF.PI;
+                        OnCaptiveLost();
+                    }
+                    else
+                    {
+                        // Smooth interpolation slot-ward; captive trails the boss in renderer.
+                        float u = e.PathT * e.PathT * (3f - 2f * e.PathT);  // smoothstep
+                        e.Position = e.BeamFromPos + (e.SlotPos - e.BeamFromPos) * u;
+                        e.Rotation = MathF.PI;
                     }
                     break;
             }
         }
+    }
+
+    // Beam-vs-player hit test: trapezoid widening from BeamTopHalfWidth at the boss to
+    // BeamBottomHalfWidth at the bottom of the playfield. Catches only the area below
+    // the boss; nothing above.
+    bool BeamCatchesPlayer(Enemy boss)
+    {
+        if (Player.Position.Y < boss.Position.Y) return false;
+        float spanY = Height - 50f - boss.Position.Y;
+        if (spanY <= 0f) return false;
+        float t = MathF.Min(1f, (Player.Position.Y - boss.Position.Y) / spanY);
+        float halfWidth = BeamTopHalfWidth + (BeamBottomHalfWidth - BeamTopHalfWidth) * t;
+        return MathF.Abs(Player.Position.X - boss.Position.X) < halfWidth + Player.Radius * 0.5f;
+    }
+
+    Enemy? _capturedByEnemy;
+
+    void OnCaptiveLost()
+    {
+        // Boss made it back to formation with the captive — that costs the player a life.
+        _capturedByEnemy = null;
+        Player.Lives    = Math.Max(0, Player.Lives - 1);
+        _deathTimer     = DeathDelay;
+        SpawnExplosion(Player.Position, PlayerExplosionColor, count: 22);
+        AudioEngine.PlayExplosion();
+    }
+
+    void OnRescue(Enemy boss)
+    {
+        // Boss-with-captive was killed — captive returns as the dual-fighter wingman.
+        _capturedByEnemy = null;
+        boss.HasCaptive = false;
+        Player.Alive          = true;
+        Player.HasWingman     = true;
+        Player.Position       = new Vec2(Width / 2f, Height - 80f);
+        Player.Velocity       = new Vec2(0f, 0f);
+        Player.InvincibleTime = 2.0f;
+        Score += RescueBonus;
+        SpawnScorePopup(Player.Position + new Vec2(0f, -40f), RescueBonus, 0xFFFFEE55u);
     }
 
     // Forward-difference rotation: look ahead by a small dt along the curve, point the
@@ -730,6 +1038,10 @@ public class GameWorld
     {
         if (!Player.Alive)
         {
+            // Captured — don't respawn until the capture sequence resolves
+            // (either OnRescue when boss is killed, or OnCaptiveLost when boss reaches slot).
+            if (_capturedByEnemy != null) return;
+
             // Wait out the death animation, then respawn or trigger game over.
             _deathTimer -= dt;
             if (_deathTimer <= 0f)
@@ -737,12 +1049,15 @@ public class GameWorld
                 if (Player.Lives > 0)
                 {
                     Player.Alive          = true;
+                    Player.HasWingman     = false;  // lose wingman on full death
                     Player.Position       = new Vec2(Width / 2f, Height - 80f);
                     Player.Velocity       = new Vec2(0f, 0f);
                     Player.InvincibleTime = RespawnInvincibility;
                 }
                 else
                 {
+                    if (Score > HighScore) HighScore = Score;
+                    HighScoreStore.Save(HighScore);
                     Mode = GameMode.GameOver;
                 }
             }

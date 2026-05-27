@@ -446,10 +446,30 @@ public static class Renderer
             NeonCircleFill(canvas, p.Position.X, p.Position.Y, 1.8f, color);
         }
 
+        // Score popups (+200 text floating upward and fading)
+        using (var popupFont = new SKFont(SKTypeface.FromFamilyName("Consolas", SKFontStyle.Bold), 20))
+        {
+            foreach (var sp in world.ScorePopups)
+            {
+                float lifeT = sp.Lifetime / MathF.Max(0.001f, sp.MaxLife);
+                byte alpha = (byte)Math.Clamp(lifeT * 255f, 0f, 255f);
+                var color = new SKColor(sp.Color).WithAlpha(alpha);
+                NeonFillSharp.Color = color;
+                canvas.DrawText($"+{sp.Value}", sp.Position.X, sp.Position.Y, SKTextAlign.Center, popupFont, NeonFillSharp);
+            }
+        }
+
         foreach (var b in world.Bullets)
         {
             var color = b.FromPlayer ? NeonBulletColor : NeonEnemyBulletColor;
             NeonCircleFill(canvas, b.Position.X, b.Position.Y, b.Radius, color);
+        }
+
+        // Tractor beams render under enemies so the boss visibly emits the beam downward.
+        foreach (var e in world.Enemies)
+        {
+            if (e.Alive && e.State == EnemyState.BeamActive)
+                DrawTractorBeam(canvas, e, world.Height);
         }
 
         foreach (var e in world.Enemies)
@@ -457,10 +477,77 @@ public static class Renderer
             DrawEnemy(canvas, e);
         }
 
+        // Captive trailing the boss (after enemies so it sits visually attached).
+        foreach (var e in world.Enemies)
+        {
+            if (e.Alive && e.HasCaptive) DrawCaptive(canvas, e);
+        }
+
         if (world.Player.Alive && PlayerVisible(world.Player))
         {
             DrawPlayer(canvas, world.Player.Position.X, world.Player.Position.Y);
+            if (world.Player.HasWingman)
+                DrawPlayer(canvas, world.Player.Position.X + world.Player.WingmanOffsetX, world.Player.Position.Y);
         }
+    }
+
+    // Tractor beam: yellow-to-amber trapezoid widening from boss down to the bottom of
+    // the playfield, with a bright stroke at the beam mouth. Coordinates mirror
+    // GameWorld.BeamTopHalfWidth / BeamBottomHalfWidth so the visual matches the hit test.
+    static void DrawTractorBeam(SKCanvas canvas, Enemy boss, float worldH)
+    {
+        float bx = boss.Position.X;
+        float by = boss.Position.Y + 8f;
+        const float topHW = 16f;
+        const float botHW = 72f;
+        float botY = worldH - 50f;
+
+        using var builder = new SKPathBuilder();
+        builder.AddPoly(stackalloc SKPoint[]
+        {
+            new(bx - topHW, by),
+            new(bx + topHW, by),
+            new(bx + botHW, botY),
+            new(bx - botHW, botY),
+        }, close: true);
+        using var path = builder.Detach();
+
+        using var fill = new SKPaint
+        {
+            IsAntialias = true,
+            Shader = SKShader.CreateLinearGradient(
+                new SKPoint(bx, by),
+                new SKPoint(bx, botY),
+                new[]
+                {
+                    new SKColor(0xFF, 0xCC, 0x33, 0xC0),
+                    new SKColor(0xFF, 0xAA, 0x88, 0x35),
+                },
+                SKShaderTileMode.Clamp),
+        };
+        canvas.DrawPath(path, fill);
+
+        using var mouth = new SKPaint
+        {
+            Style = SKPaintStyle.Stroke,
+            StrokeWidth = 2.5f,
+            IsAntialias = true,
+            Color = new SKColor(0xFF, 0xFF, 0x99, 0xE0),
+        };
+        canvas.DrawLine(bx - topHW, by, bx + topHW, by, mouth);
+    }
+
+    // Captive ship: small upside-down player silhouette attached below the boss.
+    static void DrawCaptive(SKCanvas canvas, Enemy boss)
+    {
+        canvas.Save();
+        canvas.Translate(boss.Position.X, boss.Position.Y + 22f);
+        canvas.Scale(0.6f);
+        canvas.RotateDegrees(180f);  // captured — drawn upside down
+        NeonStroke(canvas, PlayerBodyPath, NeonPlayerColor);
+        NeonFillSharp.Color = NeonPlayerCockpit;
+        canvas.DrawPath(PlayerCockpitPath, NeonFillSharp);
+        canvas.Restore();
     }
 
     static void DrawPlayer(SKCanvas canvas, float x, float y)
@@ -597,6 +684,18 @@ public static class Renderer
                 DrawHudText(c, "CHEAT: NO BULLET CAP", 24, 64, SKTextAlign.Left, cheatFont, new SKColor(0xFF, 0xCC, 0x33));
             }
 
+            // Lives indicator — small ship icons in the bottom-left.
+            for (int i = 0; i < w.Player.Lives; i++)
+            {
+                c.Save();
+                c.Translate(28f + i * 30f, ch - 28f);
+                c.Scale(0.85f);
+                NeonStroke(c, PlayerBodyPath, NeonPlayerColor);
+                NeonFillSharp.Color = NeonPlayerCockpit;
+                c.DrawPath(PlayerCockpitPath, NeonFillSharp);
+                c.Restore();
+            }
+
             // Between-stage placard: large centered announce text.
             if (w.WaveState == WaveState.Placard && !string.IsNullOrEmpty(w.PlacardText))
             {
@@ -608,6 +707,12 @@ public static class Renderer
             }
         }
 
+        if (w.Mode == GameMode.Attract)
+        {
+            using var attractFont = new SKFont(SKTypeface.FromFamilyName("Consolas", SKFontStyle.Bold), 20);
+            DrawHudText(c, "ATTRACT  -  PRESS ANY KEY", cw / 2f, ch - 32f, SKTextAlign.Center, attractFont, NeonHudColor);
+        }
+
         if (w.Mode == GameMode.Title)
         {
             DrawTitle(c, cw, ch);
@@ -615,8 +720,11 @@ public static class Renderer
         }
         else if (w.Mode == GameMode.GameOver)
         {
-            using var bigFont = new SKFont(SKTypeface.FromFamilyName("Consolas", SKFontStyle.Bold), 56);
-            DrawHudText(c, "GAME OVER", cw / 2f, ch / 2f, SKTextAlign.Center, bigFont, NeonHudColor);
+            using var bigFont   = new SKFont(SKTypeface.FromFamilyName("Consolas", SKFontStyle.Bold), 56);
+            using var smallFont = new SKFont(SKTypeface.FromFamilyName("Consolas"), 22);
+            DrawHudText(c, "GAME OVER",              cw / 2f, ch / 2f,        SKTextAlign.Center, bigFont,   NeonHudColor);
+            DrawHudText(c, $"FINAL SCORE  {w.Score:00000}", cw / 2f, ch / 2f + 50f, SKTextAlign.Center, smallFont, NeonHudColor);
+            DrawHudText(c, "PRESS SPACE TO PLAY AGAIN",     cw / 2f, ch / 2f + 90f, SKTextAlign.Center, smallFont, NeonHudColor);
         }
     }
 

@@ -11,15 +11,24 @@ public class Player
     public int Lives = 3;
     public float ShootCooldown;
     public float InvincibleTime;
+
+    // Dual-fighter: after rescuing a captured ship, the player flies side-by-side with
+    // a wingman that fires in parallel. First hit removes the wingman; the second hit
+    // is a normal death.
+    public bool HasWingman;
+    public float WingmanOffsetX = 22f;  // wingman is drawn this many pixels to the right
 }
 
 public enum EnemyState
 {
-    Entering,     // sweeping in from off-screen along an entry path
-    InFormation,  // parked at SlotPos with formation breathing applied
-    Diving,       // launched on a dive path toward the player
-    Rejoining,    // post-dive: looping back from above-screen into the formation slot
-    Flyby,        // mystery mothership traversing the top of the screen
+    Entering,           // sweeping in from off-screen along an entry path
+    InFormation,        // parked at SlotPos with formation breathing applied
+    Diving,             // launched on a dive path toward the player
+    Rejoining,          // post-dive: looping back from above-screen into the formation slot
+    Flyby,              // mystery mothership traversing the top of the screen
+    BeamSeek,           // moving to a hover position above the player to deploy beam
+    BeamActive,         // hovering and deploying tractor beam — captures player on contact
+    ReturnWithCapture,  // post-beam: flying back to formation with the captive trailing
 }
 
 public class Enemy
@@ -53,6 +62,14 @@ public class Enemy
 
     // Mystery flyby: enemy traverses the top of the screen on a straight line.
     public bool FlybyFromLeft;
+
+    // Tractor beam (boss only): the boss flies to BeamHoverPos, deploys a downward beam,
+    // and may capture the player. HasCaptive is set true if the capture succeeded; the
+    // captive ship trails the boss back to formation. BeamFromX / BeamFromY snapshot the
+    // boss position at BeamSeek start so the seek path can lerp cleanly.
+    public Vec2 BeamHoverPos;
+    public Vec2 BeamFromPos;
+    public bool HasCaptive;
 }
 
 public class Bullet
@@ -72,4 +89,13 @@ public class Particle
     public float Lifetime;
     public float MaxLife;
     public uint Color;  // packed AARRGGBB; matches SKColor(uint)
+}
+
+public class ScorePopup
+{
+    public Vec2 Position;
+    public int Value;
+    public float Lifetime;
+    public float MaxLife;
+    public uint Color;
 }

@@ -56,6 +56,7 @@ public static class AudioEngine
 #if HAS_NAUDIO
         TryPlay(new ShootSound(SampleRate));
 #endif
+        WasmPlay("globalThis.unoGalagaAudio && globalThis.unoGalagaAudio.playShoot();");
     }
 
     public static void PlayExplosion()
@@ -63,12 +64,21 @@ public static class AudioEngine
 #if HAS_NAUDIO
         TryPlay(new ExplosionSound(SampleRate));
 #endif
+        WasmPlay("globalThis.unoGalagaAudio && globalThis.unoGalagaAudio.playExplosion();");
     }
 
     public static void PlayDive()
     {
 #if HAS_NAUDIO
         TryPlay(new DiveSound(SampleRate));
+#endif
+        WasmPlay("globalThis.unoGalagaAudio && globalThis.unoGalagaAudio.playDive();");
+    }
+
+    static void WasmPlay(string js)
+    {
+#if __WASM__
+        try { Uno.Foundation.WebAssemblyRuntime.InvokeJS(js); } catch { /* fail silent */ }
 #endif
     }
 
