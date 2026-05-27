@@ -51,7 +51,7 @@ public sealed class GameWorld
     public GameWorld()
     {
         HighScore = HighScoreStore.Load();
-        Well = Wells.Build(WellShape.Circle, WorldW * 0.5f, WorldH * 0.42f, 290f);
+        Well = Wells.Build(WellShape.Circle, WorldW * 0.5f, WorldH * 0.5f, 290f);
         Player.Segment = Player.TargetSegment = Well.SegmentCount / 2;
     }
 
@@ -110,7 +110,7 @@ public sealed class GameWorld
     void BuildLevel(int level)
     {
         var shape = Wells.ForLevel(level);
-        Well = Wells.Build(shape, WorldW * 0.5f, WorldH * 0.42f, 290f);
+        Well = Wells.Build(shape, WorldW * 0.5f, WorldH * 0.5f, 290f);
 
         int n = Well.SegmentCount;
         if (Player.Segment >= n) Player.Segment = n / 2;
@@ -686,8 +686,11 @@ public sealed class GameWorld
 
     public float WarpSpikeHit; // 0..1 fraction along warp where a spike struck
 
+    GameMode _preWarpMode;
+
     void BeginWarp()
     {
+        _preWarpMode = Mode;
         Mode = GameMode.Warp;
         WarpProgress = 0f;
         WarpDuration = 2.5f;
@@ -741,7 +744,9 @@ public sealed class GameWorld
             Bullets.Clear();
             BuildLevel(Level);
             ShowPlacard($"LEVEL {Level}", 1.6f);
-            Mode = GameMode.Playing;
+            // Restore whichever mode we entered warp from so attract loops
+            // through levels instead of dropping into real Playing.
+            Mode = _preWarpMode == GameMode.Attract ? GameMode.Attract : GameMode.Playing;
         }
     }
 

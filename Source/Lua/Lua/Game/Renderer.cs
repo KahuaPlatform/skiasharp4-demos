@@ -226,64 +226,75 @@ public static class Renderer
         c.DrawRect(0, 0, cw, ch, paint);
     }
 
-    // --- Parallax starfield ----------------------------------------------------
-    struct Star { public float X, Y, Speed, Brightness; }
-    const int StarCount = 110;
+    // --- Starfield ----------------------------------------------------
+    // Tempest's playfield is otherwise empty black space — adding scrolling
+    // top-to-bottom stars looked wrong because there is no "down" direction
+    // here. Instead each star is given a fixed *radial offset* from the well
+    // center; they sit still during normal play (just twinkle slightly), then
+    // streak outward from center during the warp transition, giving the
+    // camera-flying-down-the-tube feel.
+    struct Star { public float Angle, Radius, Brightness; }
+    const int StarCount = 90;
     static Star[]? _stars;
     static readonly Random _starRng = new(13);
     static readonly Stopwatch _starsClock = Stopwatch.StartNew();
-    static double _starsLastT;
     static readonly SKPaint _starPaint = new() { IsAntialias = false, Style = SKPaintStyle.Fill };
+    static readonly SKPaint _starStreakPaint = new()
+    {
+        IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = 1.2f, StrokeCap = SKStrokeCap.Round,
+    };
 
     static void EnsureStars(float worldW, float worldH)
     {
         if (_stars != null) return;
         _stars = new Star[StarCount];
+        float maxRadius = MathF.Sqrt(worldW * worldW + worldH * worldH) * 0.6f;
         for (int i = 0; i < _stars.Length; i++)
         {
-            double r = _starRng.NextDouble();
-            int layer = r < 0.50 ? 0 : r < 0.85 ? 1 : 2;
-            _stars[i].X = (float)_starRng.NextDouble() * worldW;
-            _stars[i].Y = (float)_starRng.NextDouble() * worldH;
-            _stars[i].Speed      = layer switch { 0 => 25f, 1 => 65f, _ => 130f };
-            _stars[i].Brightness = layer switch
-            {
-                0 => 0.28f + (float)_starRng.NextDouble() * 0.15f,
-                1 => 0.55f + (float)_starRng.NextDouble() * 0.20f,
-                _ => 0.85f + (float)_starRng.NextDouble() * 0.15f,
-            };
+            // Distribute uniformly by area so stars are denser nearer the rim.
+            double u = _starRng.NextDouble();
+            _stars[i].Angle  = (float)(_starRng.NextDouble() * Math.PI * 2);
+            _stars[i].Radius = (float)Math.Sqrt(u) * maxRadius;
+            _stars[i].Brightness = 0.35f + (float)_starRng.NextDouble() * 0.55f;
         }
     }
 
-    static void UpdateStars(GameWorld world, float worldW, float worldH)
-    {
-        EnsureStars(worldW, worldH);
-        double now = _starsClock.Elapsed.TotalSeconds;
-        float dt = MathF.Min(0.1f, (float)(now - _starsLastT));
-        _starsLastT = now;
-        // Stars accelerate dramatically during warp.
-        float boost = world.Mode == GameMode.Warp ? (1f + world.WarpProgress * 8f) : 1f;
-        for (int i = 0; i < _stars!.Length; i++)
-        {
-            _stars[i].Y += _stars[i].Speed * dt * boost;
-            if (_stars[i].Y > worldH + 5f)
-            {
-                _stars[i].X = (float)_starRng.NextDouble() * worldW;
-                _stars[i].Y = -5f;
-            }
-        }
-    }
-
-    static void DrawStars(SKCanvas canvas)
+    static void DrawStars(SKCanvas canvas, GameWorld world)
     {
         if (_stars is null) return;
-        for (int i = 0; i < _stars.Length; i++)
+        float cx = world.Well.Center.X;
+        float cy = world.Well.Center.Y;
+        float twinkle = (float)_starsClock.Elapsed.TotalSeconds;
+
+        if (world.Mode == GameMode.Warp)
         {
-            var s = _stars[i];
-            byte a = (byte)(255 * s.Brightness);
-            _starPaint.Color = new SKColor(255, 255, 255, a);
-            float r = s.Brightness > 0.85f ? 1.8f : s.Brightness > 0.55f ? 1.3f : 0.9f;
-            canvas.DrawCircle(s.X, s.Y, r, _starPaint);
+            // Each star streaks outward from well center, accelerating with WarpProgress.
+            float k = 1.0f + world.WarpProgress * 4.0f;
+            for (int i = 0; i < _stars.Length; i++)
+            {
+                var s = _stars[i];
+                float rNear = s.Radius * k;
+                float rFar  = s.Radius * (k * 1.25f + 18f);
+                float dx = MathF.Cos(s.Angle); float dy = MathF.Sin(s.Angle);
+                byte a = (byte)(255 * s.Brightness);
+                _starStreakPaint.Color = new SKColor(255, 255, 255, a);
+                canvas.DrawLine(cx + dx * rNear, cy + dy * rNear,
+                                cx + dx * rFar,  cy + dy * rFar, _starStreakPaint);
+            }
+        }
+        else
+        {
+            for (int i = 0; i < _stars.Length; i++)
+            {
+                var s = _stars[i];
+                // Mild twinkle so the background isn't dead.
+                float flick = 0.85f + 0.15f * MathF.Sin(twinkle * 1.7f + i * 0.31f);
+                byte a = (byte)(255 * s.Brightness * flick);
+                _starPaint.Color = new SKColor(255, 255, 255, a);
+                float r = s.Brightness > 0.75f ? 1.5f : s.Brightness > 0.55f ? 1.0f : 0.7f;
+                canvas.DrawCircle(cx + MathF.Cos(s.Angle) * s.Radius,
+                                  cy + MathF.Sin(s.Angle) * s.Radius, r, _starPaint);
+            }
         }
     }
 
@@ -291,7 +302,7 @@ public static class Renderer
 
     public static void Render(SKCanvas canvas, GameWorld world, float canvasW, float canvasH)
     {
-        UpdateStars(world, world.Width, world.Height);
+        EnsureStars(world.Width, world.Height);
         DrawNeonBackground(canvas, canvasW, canvasH);
 
         float scale = MathF.Min(canvasW / world.Width, canvasH / world.Height);
@@ -301,7 +312,7 @@ public static class Renderer
         canvas.Save();
         canvas.Translate(ox, oy);
         canvas.Scale(scale);
-        DrawStars(canvas);
+        DrawStars(canvas, world);
         DrawWorld(canvas, world);
         canvas.Restore();
 
