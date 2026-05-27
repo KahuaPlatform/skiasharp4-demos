@@ -92,6 +92,10 @@ public sealed partial class MainPage : Page
                     _firePressedThisFrame = true;
                 _fire = true;
                 break;
+            case VirtualKey.K:
+                // Cheat: toggle Galaga's 2-bullet cap vs. cooldown-only firing.
+                _world.BulletCapEnabled = !_world.BulletCapEnabled;
+                break;
         }
         e.Handled = true;
     }

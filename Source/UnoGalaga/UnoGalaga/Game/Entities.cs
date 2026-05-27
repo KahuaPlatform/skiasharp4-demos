@@ -19,6 +19,7 @@ public enum EnemyState
     InFormation,  // parked at SlotPos with formation breathing applied
     Diving,       // launched on a dive path toward the player
     Rejoining,    // post-dive: looping back from above-screen into the formation slot
+    Flyby,        // mystery mothership traversing the top of the screen
 }
 
 public class Enemy
@@ -39,6 +40,19 @@ public class Enemy
     public bool EntryFromLeft;      // which side of the screen the entry stream came from
     public float DiveCurlSign;      // +1 curls right, -1 curls left
     public Vec2 DiveTarget;         // captured player position at dive launch
+    public float NextFireTime;      // wall-clock time (WaveTime) of next dive-shot
+
+    // Challenge-stage flythrough: enemy enters via ChallengePath and exits off-screen
+    // without settling into formation. PatternIdx selects the sub-variant within the
+    // current challenge stage's main pattern (set on GameWorld.ChallengeStagePattern).
+    public bool IsChallengeFlythrough;
+    public int PatternIdx;
+
+    // Which of the four entry-flight choreographies this enemy used. Set at spawn time.
+    public int FlightIdx;
+
+    // Mystery flyby: enemy traverses the top of the screen on a straight line.
+    public bool FlybyFromLeft;
 }
 
 public class Bullet

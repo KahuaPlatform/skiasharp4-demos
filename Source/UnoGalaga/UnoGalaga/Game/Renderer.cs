@@ -9,7 +9,8 @@ public static class Renderer
     static readonly SKColor NeonPlayerColor       = new(0x33, 0xF8, 0xFF);  // cyan body
     static readonly SKColor NeonPlayerCockpit     = new(0xFF, 0x44, 0x44);  // red cockpit
     static readonly SKColor NeonPlayerEngineGlow  = new(0xFF, 0xCC, 0x33);  // gold engine
-    static readonly SKColor NeonBulletColor       = new(0xFF, 0xEE, 0x33);
+    static readonly SKColor NeonBulletColor       = new(0xFF, 0xEE, 0x33);  // player bullets — bright yellow
+    static readonly SKColor NeonEnemyBulletColor  = new(0xFF, 0x44, 0x66);  // enemy bullets — hot red, easy to read at speed
     static readonly SKColor NeonHudColor          = new(0x33, 0xF8, 0xFF);
     static readonly SKColor NeonBgTop             = new(0x08, 0x02, 0x1A);
     static readonly SKColor NeonBgBottom          = new(0x20, 0x04, 0x40);
@@ -350,10 +351,74 @@ public static class Renderer
         c.DrawRect(0, 0, cw, ch, paint);
     }
 
+    // --- Parallax starfield --------------------------------------------------
+    // Drawn inside the world transform so star positions are in world coords.
+    // Three speed/brightness layers create depth; stars scrolling top-to-bottom
+    // gives a Galaga-style "falling through space" feel without any sample data.
+
+    struct Star { public float X, Y, Speed, Brightness; }
+    const int StarCount = 110;
+    static Star[]? _stars;
+    static readonly Random _starRng = new(13);
+    static readonly System.Diagnostics.Stopwatch _starsClock = System.Diagnostics.Stopwatch.StartNew();
+    static double _starsLastT;
+    static readonly SKPaint _starPaint = new() { IsAntialias = false, Style = SKPaintStyle.Fill };
+
+    static void EnsureStars(float worldW, float worldH)
+    {
+        if (_stars != null) return;
+        _stars = new Star[StarCount];
+        for (int i = 0; i < _stars.Length; i++)
+        {
+            double r = _starRng.NextDouble();
+            int layer = r < 0.50 ? 0 : r < 0.85 ? 1 : 2;
+            _stars[i].X = (float)_starRng.NextDouble() * worldW;
+            _stars[i].Y = (float)_starRng.NextDouble() * worldH;
+            _stars[i].Speed      = layer switch { 0 => 25f, 1 => 65f, _ => 130f };
+            _stars[i].Brightness = layer switch
+            {
+                0 => 0.28f + (float)_starRng.NextDouble() * 0.15f,
+                1 => 0.55f + (float)_starRng.NextDouble() * 0.20f,
+                _ => 0.85f + (float)_starRng.NextDouble() * 0.15f,
+            };
+        }
+    }
+
+    static void UpdateStars(float worldW, float worldH)
+    {
+        EnsureStars(worldW, worldH);
+        double now = _starsClock.Elapsed.TotalSeconds;
+        float dt = MathF.Min(0.1f, (float)(now - _starsLastT));
+        _starsLastT = now;
+        for (int i = 0; i < _stars!.Length; i++)
+        {
+            _stars[i].Y += _stars[i].Speed * dt;
+            if (_stars[i].Y > worldH + 5f)
+            {
+                _stars[i].X = (float)_starRng.NextDouble() * worldW;
+                _stars[i].Y = -5f;
+            }
+        }
+    }
+
+    static void DrawStars(SKCanvas canvas)
+    {
+        if (_stars is null) return;
+        for (int i = 0; i < _stars.Length; i++)
+        {
+            var s = _stars[i];
+            byte a = (byte)(255 * s.Brightness);
+            _starPaint.Color = new SKColor(255, 255, 255, a);
+            float r = s.Brightness > 0.85f ? 1.8f : s.Brightness > 0.55f ? 1.3f : 0.9f;
+            canvas.DrawCircle(s.X, s.Y, r, _starPaint);
+        }
+    }
+
     // --- Render entry point ---
 
     public static void Render(SKCanvas canvas, GameWorld world, float canvasW, float canvasH)
     {
+        UpdateStars(world.Width, world.Height);
         DrawNeonBackground(canvas, canvasW, canvasH);
 
         // Letterbox the virtual world onto the canvas, preserving aspect.
@@ -364,6 +429,7 @@ public static class Renderer
         canvas.Save();
         canvas.Translate(ox, oy);
         canvas.Scale(scale);
+        DrawStars(canvas);
         DrawWorld(canvas, world);
         canvas.Restore();
 
@@ -382,7 +448,8 @@ public static class Renderer
 
         foreach (var b in world.Bullets)
         {
-            NeonCircleFill(canvas, b.Position.X, b.Position.Y, b.Radius, NeonBulletColor);
+            var color = b.FromPlayer ? NeonBulletColor : NeonEnemyBulletColor;
+            NeonCircleFill(canvas, b.Position.X, b.Position.Y, b.Radius, color);
         }
 
         foreach (var e in world.Enemies)
@@ -516,6 +583,29 @@ public static class Renderer
         {
             using var smallFont = new SKFont(SKTypeface.FromFamilyName("Consolas"), 18);
             DrawHudText(c, $"HI {w.HighScore:00000}", cw / 2f, 28, SKTextAlign.Center, smallFont, NeonHudColor);
+        }
+
+        if (w.Mode == GameMode.Playing)
+        {
+            using var stageFont = new SKFont(SKTypeface.FromFamilyName("Consolas", SKFontStyle.Bold), 22);
+            string stageLabel = w.IsChallengeStage ? "CHALLENGE" : $"STAGE {w.Stage}";
+            DrawHudText(c, stageLabel, cw - 24, 32, SKTextAlign.Right, stageFont, NeonHudColor);
+
+            if (!w.BulletCapEnabled)
+            {
+                using var cheatFont = new SKFont(SKTypeface.FromFamilyName("Consolas"), 16);
+                DrawHudText(c, "CHEAT: NO BULLET CAP", 24, 64, SKTextAlign.Left, cheatFont, new SKColor(0xFF, 0xCC, 0x33));
+            }
+
+            // Between-stage placard: large centered announce text.
+            if (w.WaveState == WaveState.Placard && !string.IsNullOrEmpty(w.PlacardText))
+            {
+                using var placardFont = new SKFont(SKTypeface.FromFamilyName("Consolas", SKFontStyle.Bold), 44);
+                SKColor color = w.PlacardText.Contains("CHALLENG") || w.PlacardText.Contains("BONUS")
+                    ? new SKColor(0xFF, 0xAA, 0x33)
+                    : NeonHudColor;
+                DrawHudText(c, w.PlacardText, cw / 2f, ch * 0.42f, SKTextAlign.Center, placardFont, color);
+            }
         }
 
         if (w.Mode == GameMode.Title)

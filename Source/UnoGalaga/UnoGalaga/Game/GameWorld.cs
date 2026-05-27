@@ -1,7 +1,7 @@
 namespace UnoGalaga.Game;
 
 public enum GameMode { Title, Playing, GameOver }
-public enum WaveState { Spawning, Settling, Attacking, Cleared }
+public enum WaveState { Spawning, Settling, Attacking, Placard, Cleared }
 
 // Wave choreography skeleton. Spawns a 4×6 formation enemy-by-enemy on
 // alternating left/right entry streams, settles for a beat, then launches
@@ -21,21 +21,29 @@ public class GameWorld
     public WaveState WaveState = WaveState.Spawning;
     public int Score;
     public int HighScore;
+    public int Stage = 1;
+    public bool IsChallengeStage;
+    public string PlacardText = "";
     public bool MovingLeft;
     public bool MovingRight;
+    public bool BulletCapEnabled = true;  // K key cheats it off — old cooldown-only firing
 
     public float WaveTime;   // total elapsed seconds in current wave (for breathing phase)
 
     // --- Player tuning ---
     const float PlayerSpeed = 380f;
     const float ShootInterval = 0.18f;
+    const int   MaxPlayerBullets = 2;   // Galaga rule — forces shot discipline
 
-    // --- Formation layout ---
-    const int   FormationCols    = 6;
-    const int   FormationRows    = 4;
-    const float FormationColSpacing = 80f;
-    const float FormationRowSpacing = 70f;
+    // --- Formation layout: authentic Galaga 4+8+8+10+10 = 40 enemies ---
+    // Row 0 (top): 4 high-tier (snowflake + mothership + 2 bosses)
+    // Rows 1-2:    8 medium-tier each (captains, then wings)
+    // Rows 3-4:    10 drones each (the wider "bee" rows that stick out at the bottom)
+    static readonly int[] RowCounts = { 4, 8, 8, 10, 10 };
+    const float FormationColSpacing = 60f;
+    const float FormationRowSpacing = 64f;
     const float FormationCenterY    = 140f;
+    const int   FlightSize          = 10;   // 40 enemies / 4 flights
 
     // --- Choreography timing ---
     const float SpawnInterval        = 0.18f;
@@ -49,6 +57,15 @@ public class GameWorld
     const float BreathingAmplitude   = 7f;
     const float DeathDelay           = 1.4f;
     const float RespawnInvincibility = 2.0f;
+    const float EnemyBulletSpeed     = 320f;
+    const int   MaxEnemyBullets      = 4;
+    const float EnemyFireMin         = 0.45f;   // shortest gap between an enemy's shots
+    const float EnemyFireMax         = 1.25f;   // longest gap
+    const float PlacardDuration      = 2.5f;
+    const int   ChallengeWaveSize    = 40;
+    const int   ChallengePerfectBonus = 10_000;
+    const float ChallengeSpawnInterval = 0.16f;
+    const float ChallengeFlythroughDuration = 4.2f;
 
     // Explosion + score data per enemy kind (indexed by Enemy.Kind 0..5).
     static readonly uint[] ExplosionColors =
@@ -64,11 +81,19 @@ public class GameWorld
     const uint PlayerExplosionColor = 0xFF33F8FFu;
 
     int _spawnedCount;
+    int _challengeKills;
+    int _challengeStagePattern;  // 0-3, selects which of the four challenge choreographies
     float _spawnTimer;
     float _settleTimer;
     float _attackTimer;
     float _deathTimer;
+    float _placardTimer;
+    float _flybyTimer;           // seconds until next mystery flyby attempt
     readonly Random _rng = new(42);
+
+    const float FlybyInterval     = 28f;  // average gap between flybys
+    const float FlybyDuration     = 6f;   // seconds to traverse the screen
+    const int   FlybyKillBonus    = 1500; // score for shooting down the mystery mothership
 
     public GameWorld()
     {
@@ -83,8 +108,9 @@ public class GameWorld
 
     public void StartGame()
     {
-        Mode      = GameMode.Playing;
-        WaveState = WaveState.Spawning;
+        Mode  = GameMode.Playing;
+        Stage = 1;
+        IsChallengeStage = false;
         Score = 0;
         Enemies.Clear();
         Bullets.Clear();
@@ -94,12 +120,41 @@ public class GameWorld
             Position = new Vec2(Width / 2f, Height - 80f),
             InvincibleTime = 1.5f,
         };
-        _spawnedCount = 0;
-        _spawnTimer   = 0f;
-        _settleTimer  = 0f;
-        _attackTimer  = 0f;
-        WaveTime      = 0f;
+        WaveTime    = 0f;
+        _flybyTimer = 6f;  // first flyby ~6s into the attacking phase so testers see it quickly
+        StartNormalWave();
     }
+
+    void StartNormalWave()
+    {
+        WaveState        = WaveState.Spawning;
+        IsChallengeStage = false;
+        _spawnedCount    = 0;
+        _challengeKills  = 0;
+        _spawnTimer      = 0f;
+        _settleTimer     = 0f;
+        _attackTimer     = 0f;
+    }
+
+    void StartChallengeWave()
+    {
+        WaveState        = WaveState.Spawning;
+        IsChallengeStage = true;
+        _spawnedCount    = 0;
+        _challengeKills  = 0;
+        _spawnTimer      = 0f;
+        // Pattern 0 -> stage 3, 1 -> stage 7, 2 -> stage 11, 3 -> stage 15, repeating.
+        _challengeStagePattern = (Stage / 4) % 4;
+    }
+
+    void StartPlacard(string text)
+    {
+        WaveState     = WaveState.Placard;
+        PlacardText   = text;
+        _placardTimer = PlacardDuration;
+    }
+
+    static bool IsChallengeStageNumber(int stage) => stage % 4 == 3;  // stages 3, 7, 11, ...
 
     public void ResetForTitle()
     {
@@ -117,6 +172,14 @@ public class GameWorld
     public void FireBullet()
     {
         if (Player.ShootCooldown > 0 || !Player.Alive) return;
+
+        if (BulletCapEnabled)
+        {
+            int active = 0;
+            foreach (var b in Bullets) if (b.Alive && b.FromPlayer) active++;
+            if (active >= MaxPlayerBullets) return;
+        }
+
         Bullets.Add(new Bullet
         {
             Position = new Vec2(Player.Position.X, Player.Position.Y - Player.Radius - 4f),
@@ -137,6 +200,7 @@ public class GameWorld
             case WaveState.Spawning:  UpdateSpawning(dt);  break;
             case WaveState.Settling:  UpdateSettling(dt);  break;
             case WaveState.Attacking: UpdateAttacking(dt); break;
+            case WaveState.Placard:   UpdatePlacard(dt);   break;
         }
 
         UpdateEnemyPositions(dt);
@@ -167,9 +231,18 @@ public class GameWorld
 
                 bullet.Alive = false;
                 enemy.Alive  = false;
-                int score = ScoreForKind(enemy.Kind);
-                if (enemy.State == EnemyState.Diving) score *= 2;  // Galaga-style dive bonus
+                int score;
+                if (enemy.State == EnemyState.Flyby)
+                {
+                    score = FlybyKillBonus;  // mystery mothership — fixed high score
+                }
+                else
+                {
+                    score = ScoreForKind(enemy.Kind);
+                    if (enemy.State == EnemyState.Diving) score *= 2;  // Galaga-style dive bonus
+                }
                 Score += score;
+                if (IsChallengeStage && enemy.State != EnemyState.Flyby) _challengeKills++;
                 SpawnExplosion(enemy.Position, ExplosionColors[Math.Clamp(enemy.Kind, 0, ExplosionColors.Length - 1)]);
                 AudioEngine.PlayExplosion();
                 break;
@@ -185,15 +258,34 @@ public class GameWorld
                 if (!CirclesOverlap(enemy.Position, enemy.Radius, Player.Position, Player.Radius)) continue;
 
                 enemy.Alive   = false;
-                Player.Alive  = false;
-                Player.Lives  = Math.Max(0, Player.Lives - 1);
-                _deathTimer   = DeathDelay;
-                SpawnExplosion(Player.Position, PlayerExplosionColor, count: 22);
-                SpawnExplosion(enemy.Position,  ExplosionColors[Math.Clamp(enemy.Kind, 0, ExplosionColors.Length - 1)]);
-                AudioEngine.PlayExplosion();
+                KillPlayer(enemyKind: enemy.Kind);
+                SpawnExplosion(enemy.Position, ExplosionColors[Math.Clamp(enemy.Kind, 0, ExplosionColors.Length - 1)]);
                 break;
             }
         }
+
+        // Enemy bullets vs the player.
+        if (Player.Alive && Player.InvincibleTime <= 0f)
+        {
+            foreach (var bullet in Bullets)
+            {
+                if (!bullet.Alive || bullet.FromPlayer) continue;
+                if (!CirclesOverlap(bullet.Position, bullet.Radius, Player.Position, Player.Radius)) continue;
+
+                bullet.Alive = false;
+                KillPlayer(enemyKind: -1);
+                break;
+            }
+        }
+    }
+
+    void KillPlayer(int enemyKind)
+    {
+        Player.Alive = false;
+        Player.Lives = Math.Max(0, Player.Lives - 1);
+        _deathTimer  = DeathDelay;
+        SpawnExplosion(Player.Position, PlayerExplosionColor, count: 22);
+        AudioEngine.PlayExplosion();
     }
 
     static bool CirclesOverlap(Vec2 a, float ra, Vec2 b, float rb)
@@ -230,14 +322,25 @@ public class GameWorld
     void UpdateSpawning(float dt)
     {
         _spawnTimer -= dt;
-        int totalSlots = FormationRows * FormationCols;
+        int totalSlots  = IsChallengeStage ? ChallengeWaveSize : TotalFormationSlots();
+        float interval  = IsChallengeStage ? ChallengeSpawnInterval : SpawnInterval;
+
         if (_spawnTimer <= 0f && _spawnedCount < totalSlots)
         {
             SpawnNextEnemy();
-            _spawnTimer = SpawnInterval;
+            _spawnTimer = interval;
         }
 
-        if (_spawnedCount >= totalSlots)
+        if (IsChallengeStage)
+        {
+            // Challenge stages have no formation: each spawned enemy flies through and
+            // exits. The stage clears when all 40 have either been killed or flown off.
+            if (_spawnedCount >= totalSlots && Enemies.Count == 0)
+            {
+                FinishChallengeStage();
+            }
+        }
+        else if (_spawnedCount >= totalSlots)
         {
             bool allSettled = true;
             foreach (var e in Enemies)
@@ -250,6 +353,14 @@ public class GameWorld
                 _settleTimer = SettlingDelay;
             }
         }
+    }
+
+    void FinishChallengeStage()
+    {
+        bool perfect = _challengeKills >= ChallengeWaveSize;
+        if (perfect) Score += ChallengePerfectBonus;
+        string label = perfect ? $"PERFECT  -  BONUS {ChallengePerfectBonus:N0}" : "CHALLENGE COMPLETE";
+        StartPlacard(label);
     }
 
     void UpdateSettling(float dt)
@@ -271,9 +382,67 @@ public class GameWorld
             _attackTimer = PairAttackInterval;
         }
 
-        if (Enemies.Count == 0)
+        // Mystery flyby — periodic bonus target traversing the top of the screen.
+        _flybyTimer -= dt;
+        if (_flybyTimer <= 0f)
         {
-            WaveState = WaveState.Cleared;
+            SpawnFlyby();
+            _flybyTimer = FlybyInterval + (float)_rng.NextDouble() * 10f;
+        }
+
+        // Wave-clear requires the formation to be gone AND no flyby still in transit
+        // (otherwise a flyby active at clear time would skip to the next stage early).
+        if (Enemies.Count == 0 || !AnyFormationEnemyAlive())
+        {
+            if (!AnyFlybyAlive())
+            {
+                int next = Stage + 1;
+                StartPlacard(IsChallengeStageNumber(next) ? "CHALLENGING STAGE" : $"STAGE {next}");
+            }
+        }
+    }
+
+    bool AnyFormationEnemyAlive()
+    {
+        foreach (var e in Enemies) if (e.Alive && e.State != EnemyState.Flyby) return true;
+        return false;
+    }
+
+    bool AnyFlybyAlive()
+    {
+        foreach (var e in Enemies) if (e.Alive && e.State == EnemyState.Flyby) return true;
+        return false;
+    }
+
+    void SpawnFlyby()
+    {
+        bool fromLeft = _rng.Next(2) == 0;
+        // Alternate which mark flies by — gives both brands stage time.
+        int kind = _rng.Next(2) == 0 ? 4 : 5;
+        Enemies.Add(new Enemy
+        {
+            Kind          = kind,
+            Position      = Paths.FlybyPath(fromLeft, Width, 0f),
+            State         = EnemyState.Flyby,
+            PathT         = 0f,
+            PathDuration  = FlybyDuration,
+            FlybyFromLeft = fromLeft,
+            Radius        = 20f,
+        });
+    }
+
+    void UpdatePlacard(float dt)
+    {
+        _placardTimer -= dt;
+        if (_placardTimer <= 0f)
+        {
+            // Clear leftover enemy bullets so the new stage starts clean.
+            Bullets.RemoveAll(b => !b.FromPlayer);
+            Stage++;
+            if (IsChallengeStageNumber(Stage))
+                StartChallengeWave();
+            else
+                StartNormalWave();
         }
     }
 
@@ -282,44 +451,100 @@ public class GameWorld
     void SpawnNextEnemy()
     {
         int idx = _spawnedCount++;
-        int row = idx / FormationCols;
-        int col = idx % FormationCols;
-        bool fromLeft = (idx % 2 == 0);  // alternating side streams
+
+        if (IsChallengeStage)
+        {
+            int subIdx = idx % 8;
+            int kind = idx switch
+            {
+                _ when idx % 10 == 0 => 4,  // sprinkle one Uno mothership per 10
+                _ when idx % 10 == 5 => 5,  // and one Kahua snowflake
+                _ => idx % 4 switch
+                {
+                    0 => 2,  // captain
+                    1 => 1,  // wing
+                    2 => 0,  // drone
+                    _ => 3,  // boss
+                },
+            };
+            Enemies.Add(new Enemy
+            {
+                Kind         = kind,
+                PatternIdx   = subIdx,
+                Position     = Paths.ChallengePath(_challengeStagePattern, subIdx, Width, Height, 0f),
+                State        = EnemyState.Entering,
+                PathT        = 0f,
+                PathDuration = ChallengeFlythroughDuration,
+                IsChallengeFlythrough = true,
+                Phase        = idx * 0.17f,
+                Radius       = 16f,
+            });
+            return;
+        }
+
+        var (row, col) = SlotFromIndex(idx);
+        bool fromLeft = (idx % 2 == 0);
+        int flightIdx = Math.Min(idx / FlightSize, 3);
 
         var slot = GetSlotPosition(row, col);
-        var enemy = new Enemy
+        Enemies.Add(new Enemy
         {
-            Kind     = GetSlotKind(row, col),
-            SlotPos  = slot,
-            Position = Paths.EntryPath(slot, fromLeft, Width, Height, 0f),
-            State    = EnemyState.Entering,
-            PathT    = 0f,
-            PathDuration   = EntryDuration,
-            EntryFromLeft  = fromLeft,
-            Phase    = idx * 0.21f,
-            Radius   = 16f,
-        };
-        Enemies.Add(enemy);
+            Kind          = GetSlotKind(row, col),
+            SlotPos       = slot,
+            Position      = Paths.EntryPath(flightIdx, slot, fromLeft, Width, Height, 0f),
+            State         = EnemyState.Entering,
+            PathT         = 0f,
+            PathDuration  = EntryDuration,
+            EntryFromLeft = fromLeft,
+            FlightIdx     = flightIdx,
+            Phase         = idx * 0.21f,
+            Radius        = 16f,
+        });
+    }
+
+    static int TotalFormationSlots()
+    {
+        int n = 0;
+        foreach (int rc in RowCounts) n += rc;
+        return n;
+    }
+
+    // Walk RowCounts cumulatively to convert a linear spawn index into (row, col).
+    static (int row, int col) SlotFromIndex(int idx)
+    {
+        for (int r = 0; r < RowCounts.Length; r++)
+        {
+            if (idx < RowCounts[r]) return (r, idx);
+            idx -= RowCounts[r];
+        }
+        // Past the end — shouldn't happen if callers respect TotalFormationSlots.
+        return (RowCounts.Length - 1, RowCounts[^1] - 1);
     }
 
     Vec2 GetSlotPosition(int row, int col)
     {
-        float x = Width / 2f + (col - (FormationCols - 1) / 2f) * FormationColSpacing;
+        int cols = RowCounts[row];
+        float x = Width / 2f + (col - (cols - 1) / 2f) * FormationColSpacing;
         float y = FormationCenterY + row * FormationRowSpacing;
         return new Vec2(x, y);
     }
 
     int GetSlotKind(int row, int col)
     {
-        // Top row reserves the middle two slots for motherships, with snowflake bonuses
-        // at the very center if the column count is large enough; everything else fills
-        // the standard drone/wing/captain/boss progression.
+        // Row 0 (4 slots): bosses flanking the Kahua snowflake + Uno mothership pair.
+        // Rows 1-2 (8 each): captains then wings.
+        // Rows 3-4 (10 each): drones.
         return row switch
         {
-            0 => (col == FormationCols / 2 - 1 || col == FormationCols / 2) ? 4 : 3,  // mothership pair + bosses
+            0 => col switch
+            {
+                1 => 5,  // Kahua snowflake
+                2 => 4,  // Uno mothership
+                _ => 3,  // bosses at cols 0 and 3
+            },
             1 => 2,  // captains
             2 => 1,  // wings
-            _ => 0,  // drones
+            _ => 0,  // drones (rows 3-4)
         };
     }
 
@@ -358,7 +583,28 @@ public class GameWorld
         e.PathDuration   = DiveDuration;
         e.DiveCurlSign   = e.SlotPos.X < centerX ? -1f : +1f;
         e.DiveTarget     = Player.Position;
+        e.NextFireTime   = WaveTime + EnemyFireMin + (float)_rng.NextDouble() * (EnemyFireMax - EnemyFireMin);
         AudioEngine.PlayDive();
+    }
+
+    void FireEnemyBullet(Enemy e)
+    {
+        // Cap concurrent enemy bullets — Galaga's pacing leans on never having more than a
+        // handful of threats in the air at once.
+        int enemyBullets = 0;
+        foreach (var b in Bullets) if (b.Alive && !b.FromPlayer) enemyBullets++;
+        if (enemyBullets >= MaxEnemyBullets) return;
+
+        var toPlayer = Player.Position - e.Position;
+        if (toPlayer.Length < 0.1f) return;
+        var dir = toPlayer.Normalized();
+        Bullets.Add(new Bullet
+        {
+            Position   = e.Position,
+            Velocity   = dir * EnemyBulletSpeed,
+            FromPlayer = false,
+            Lifetime   = 3.5f,
+        });
     }
 
     // --- Per-frame enemy update ---
@@ -373,15 +619,30 @@ public class GameWorld
                     e.PathT += dt / e.PathDuration;
                     if (e.PathT >= 1f)
                     {
-                        e.PathT = 1f;
-                        e.State = EnemyState.InFormation;
-                        e.Position = e.SlotPos;
-                        e.Rotation = MathF.PI;  // face down toward the player
+                        if (e.IsChallengeFlythrough)
+                        {
+                            // Flew off the bottom of the screen — done, no rejoin.
+                            e.Alive = false;
+                        }
+                        else
+                        {
+                            e.PathT = 1f;
+                            e.State = EnemyState.InFormation;
+                            e.Position = e.SlotPos;
+                            e.Rotation = MathF.PI;  // face down toward the player
+                        }
+                    }
+                    else if (e.IsChallengeFlythrough)
+                    {
+                        int sp = _challengeStagePattern;
+                        var p = Paths.ChallengePath(sp, e.PatternIdx, Width, Height, e.PathT);
+                        UpdatePathFacing(e, p, t => Paths.ChallengePath(sp, e.PatternIdx, Width, Height, t));
+                        e.Position = p;
                     }
                     else
                     {
-                        var p = Paths.EntryPath(e.SlotPos, e.EntryFromLeft, Width, Height, e.PathT);
-                        UpdatePathFacing(e, p, t => Paths.EntryPath(e.SlotPos, e.EntryFromLeft, Width, Height, t));
+                        var p = Paths.EntryPath(e.FlightIdx, e.SlotPos, e.EntryFromLeft, Width, Height, e.PathT);
+                        UpdatePathFacing(e, p, t => Paths.EntryPath(e.FlightIdx, e.SlotPos, e.EntryFromLeft, Width, Height, t));
                         e.Position = p;
                     }
                     break;
@@ -406,6 +667,14 @@ public class GameWorld
                         var p = Paths.DivePath(e.SlotPos, e.DiveTarget, Height, e.DiveCurlSign, e.PathT);
                         UpdatePathFacing(e, p, t => Paths.DivePath(e.SlotPos, e.DiveTarget, Height, e.DiveCurlSign, t));
                         e.Position = p;
+
+                        // Fire downward shots while diving (only while above the player so shots
+                        // actually have time to reach). Each enemy schedules its own next-fire-time.
+                        if (WaveTime >= e.NextFireTime && e.Position.Y < Player.Position.Y - 40f)
+                        {
+                            FireEnemyBullet(e);
+                            e.NextFireTime = WaveTime + EnemyFireMin + (float)_rng.NextDouble() * (EnemyFireMax - EnemyFireMin);
+                        }
                     }
                     break;
 
@@ -422,6 +691,19 @@ public class GameWorld
                         var p = Paths.RejoinPath(e.SlotPos, e.DiveCurlSign, e.PathT);
                         UpdatePathFacing(e, p, t => Paths.RejoinPath(e.SlotPos, e.DiveCurlSign, t));
                         e.Position = p;
+                    }
+                    break;
+
+                case EnemyState.Flyby:
+                    e.PathT += dt / e.PathDuration;
+                    if (e.PathT >= 1f)
+                    {
+                        e.Alive = false;  // exited the screen
+                    }
+                    else
+                    {
+                        e.Position = Paths.FlybyPath(e.FlybyFromLeft, Width, e.PathT);
+                        e.Rotation = 0f;  // logos stay upright; rotation suppressed in renderer for kinds 4-5 anyway
                     }
                     break;
             }
