@@ -56,7 +56,7 @@ public static class AudioEngine
 #if HAS_NAUDIO
         TryPlay(new ShootSound(SampleRate));
 #endif
-        WasmPlay("globalThis.unoGalagaAudio && globalThis.unoGalagaAudio.playShoot();");
+        WasmPlay("globalThis.hokuLeleAudio && globalThis.hokuLeleAudio.playShoot();");
     }
 
     public static void PlayExplosion()
@@ -64,7 +64,7 @@ public static class AudioEngine
 #if HAS_NAUDIO
         TryPlay(new ExplosionSound(SampleRate));
 #endif
-        WasmPlay("globalThis.unoGalagaAudio && globalThis.unoGalagaAudio.playExplosion();");
+        WasmPlay("globalThis.hokuLeleAudio && globalThis.hokuLeleAudio.playExplosion();");
     }
 
     public static void PlayDive()
@@ -72,7 +72,7 @@ public static class AudioEngine
 #if HAS_NAUDIO
         TryPlay(new DiveSound(SampleRate));
 #endif
-        WasmPlay("globalThis.unoGalagaAudio && globalThis.unoGalagaAudio.playDive();");
+        WasmPlay("globalThis.hokuLeleAudio && globalThis.hokuLeleAudio.playDive();");
     }
 
     static void WasmPlay(string js)

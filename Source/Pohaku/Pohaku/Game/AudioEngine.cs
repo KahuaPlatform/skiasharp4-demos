@@ -6,9 +6,9 @@ using NAudio.Wave.SampleProviders;
 namespace Pohaku.Game;
 
 // Procedural sound effects for the game. On net10.0-desktop we synthesise via NAudio
-// (no sample files needed — every effect is generated from simple oscillators + envelopes
-// in code). On wasm/other TFMs all calls are no-ops; wasm audio would need Web Audio
-// via JS interop, which is out of scope for the stage demo.
+// (no sample files needed). On net10.0-browserwasm we delegate to the procedural Web
+// Audio voices in Platforms/WebAssembly/WasmScripts/audio.js via JS interop. Other
+// TFMs are no-ops.
 public static class AudioEngine
 {
 #if HAS_NAUDIO
@@ -63,6 +63,7 @@ public static class AudioEngine
 #if HAS_NAUDIO
         TryPlay(new ShootSound(SampleRate));
 #endif
+        WasmPlay("globalThis.pohakuAudio && globalThis.pohakuAudio.playShoot();");
     }
 
     public static void PlayExplosion()
@@ -70,6 +71,7 @@ public static class AudioEngine
 #if HAS_NAUDIO
         TryPlay(new ExplosionSound(SampleRate));
 #endif
+        WasmPlay("globalThis.pohakuAudio && globalThis.pohakuAudio.playExplosion();");
     }
 
     public static void PlayHyperspace()
@@ -77,6 +79,7 @@ public static class AudioEngine
 #if HAS_NAUDIO
         TryPlay(new HyperspaceSound(SampleRate));
 #endif
+        WasmPlay("globalThis.pohakuAudio && globalThis.pohakuAudio.playHyperspace();");
     }
 
     // --- Looping voices (call Start when entity becomes active, Stop when it disappears) ---
@@ -88,6 +91,7 @@ public static class AudioEngine
         _thrust = new ThrustLoop(SampleRate);
         TryPlay(_thrust);
 #endif
+        WasmPlay("globalThis.pohakuAudio && globalThis.pohakuAudio.startThrust();");
     }
 
     public static void StopThrust()
@@ -96,6 +100,7 @@ public static class AudioEngine
         _thrust?.Stop();
         _thrust = null;
 #endif
+        WasmPlay("globalThis.pohakuAudio && globalThis.pohakuAudio.stopThrust();");
     }
 
     public static void StartSaucer(bool large)
@@ -105,6 +110,7 @@ public static class AudioEngine
         _saucer = new SaucerHum(SampleRate, large);
         TryPlay(_saucer);
 #endif
+        WasmPlay($"globalThis.pohakuAudio && globalThis.pohakuAudio.startSaucer({(large ? "true" : "false")});");
     }
 
     public static void StopSaucer()
@@ -112,6 +118,14 @@ public static class AudioEngine
 #if HAS_NAUDIO
         _saucer?.Stop();
         _saucer = null;
+#endif
+        WasmPlay("globalThis.pohakuAudio && globalThis.pohakuAudio.stopSaucer();");
+    }
+
+    static void WasmPlay(string js)
+    {
+#if __WASM__
+        try { Uno.Foundation.WebAssemblyRuntime.InvokeJS(js); } catch { /* fail silent */ }
 #endif
     }
 

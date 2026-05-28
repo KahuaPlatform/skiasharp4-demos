@@ -27,8 +27,16 @@
     </UnoFeatures>
   </PropertyGroup>
 
+  <!-- The Uno SDK only auto-globs known WasmScripts (AppManifest.js, Fonts.css);
+       arbitrary additional JS files need explicit EmbeddedResource entries so the
+       Uno bootstrapper picks them up and loads them into globalThis. -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-browserwasm'">
+    <EmbeddedResource Include="Platforms\WebAssembly\WasmScripts\audio.js" />
+  </ItemGroup>
+
   <!-- NAudio is Windows-only; conditionally referenced for the desktop TFM,
-       with HAS_NAUDIO compile constant so AudioEngine no-ops on wasm. -->
+       with HAS_NAUDIO compile constant so AudioEngine falls back to Web Audio
+       on wasm via JS interop. -->
   <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-desktop'">
     <PackageReference Include="NAudio" />
   </ItemGroup>

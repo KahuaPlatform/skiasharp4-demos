@@ -7,7 +7,7 @@
 // which the player's first Space-to-fire conveniently satisfies.
 
 (function () {
-    const NS = (globalThis.unoGalagaAudio = globalThis.unoGalagaAudio || {});
+    const NS = (globalThis.hokuLeleAudio = globalThis.hokuLeleAudio || {});
     NS.ctx = null;
 
     NS.ensure = function () {
