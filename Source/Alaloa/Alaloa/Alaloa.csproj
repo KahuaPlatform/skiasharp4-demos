@@ -1,0 +1,54 @@
+<Project Sdk="Uno.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net10.0-browserwasm;net10.0-desktop</TargetFrameworks>
+
+    <OutputType>Exe</OutputType>
+    <UnoSingleProject>true</UnoSingleProject>
+    <SkiaSharpVersion>4.147.0-preview.3.1</SkiaSharpVersion>
+
+    <!-- Display name -->
+    <ApplicationTitle>Alaloa</ApplicationTitle>
+    <!-- App Identifier -->
+    <ApplicationId>com.companyname.alaloa</ApplicationId>
+    <!-- Versions -->
+    <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
+    <ApplicationVersion>1</ApplicationVersion>
+    <!-- Package Publisher -->
+    <ApplicationPublisher>Alaloa</ApplicationPublisher>
+    <!-- Package Description -->
+    <Description>Alaloa powered by Uno Platform.</Description>
+
+    <!--
+      UnoFeatures are used to quickly add and manage features enabled for your app.
+      https://aka.platform.uno/singleproject-features
+    -->
+    <UnoFeatures>
+      SkiaRenderer;
+    </UnoFeatures>
+  </PropertyGroup>
+
+  <!-- Shared neon chassis at Source/Common/ — pulled in as source so each demo
+       compiles its own copy and can keep its own SkiaSharp version pin. The
+       Link metadata makes the linked files appear under a "Common" virtual
+       folder in IDE solution trees. -->
+  <ItemGroup>
+    <Compile Include="..\..\Common\**\*.cs" Link="Common\%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <!-- The Uno SDK only auto-globs known WasmScripts (AppManifest.js, Fonts.css);
+       arbitrary additional JS files need explicit EmbeddedResource entries so the
+       Uno bootstrapper picks them up and loads them into globalThis. -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-browserwasm'">
+    <EmbeddedResource Include="Platforms\WebAssembly\WasmScripts\audio.js" />
+  </ItemGroup>
+
+  <!-- NAudio is Windows-only; conditionally referenced for the desktop TFM,
+       with HAS_NAUDIO compile constant so AudioEngine no-ops on wasm. -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-desktop'">
+    <PackageReference Include="NAudio" />
+  </ItemGroup>
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net10.0-desktop'">
+    <DefineConstants>$(DefineConstants);HAS_NAUDIO</DefineConstants>
+  </PropertyGroup>
+
+</Project>

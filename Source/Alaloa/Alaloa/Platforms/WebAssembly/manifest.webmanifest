@@ -1,0 +1,10 @@
+{
+  "background_color": "#ffffff",
+  "description": "Alaloa",
+  "display": "standalone",
+  "name": "Alaloa",
+  "short_name": "Alaloa",
+  "start_url": "/index.html",
+  "theme_color": "#ffffff",
+  "scope": "/"
+}
