@@ -107,6 +107,8 @@ public class GameWorld
     const float BeamBottomHalfWidth   = 72f;
     const int   RescueBonus           = 1000;
 
+    static readonly HighScoreStore HighScoreStore = new("HokuLele");
+
     public GameWorld()
     {
         HighScore = HighScoreStore.Load();

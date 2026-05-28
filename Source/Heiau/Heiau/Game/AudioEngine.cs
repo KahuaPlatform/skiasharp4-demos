@@ -1,142 +1,100 @@
 #if HAS_NAUDIO
 using NAudio.Wave;
-using NAudio.Wave.SampleProviders;
 #endif
 
 namespace Heiau.Game;
 
 // Procedural sound effects for Heiau (Star-Castle-style ring shooter).
-// Desktop: NAudio synth voices. WASM: Web Audio via JS interop.
+// Plumbing (NAudio mixer + JS interop bridge) lives in the shared
+// `Arcade.Common.Audio.AudioEngineBase`. This class wraps a singleton instance
+// and exposes the static API the game code already uses.
 public static class AudioEngine
 {
-#if HAS_NAUDIO
-    const int SampleRate = 44100;
-    static WaveOutEvent? _output;
-    static MixingSampleProvider? _mixer;
-    static bool _initialized;
-    static ThrustLoop? _thrust;
-#endif
+    static readonly AudioEngineImpl _impl = new();
+    public static void Init()     => _impl.Init();
+    public static void Shutdown() => _impl.Shutdown();
+    public static void PlayShoot()         => _impl.PlayShoot();
+    public static void PlayRingHit()       => _impl.PlayRingHit();
+    public static void PlayTurretFire()    => _impl.PlayTurretFire();
+    public static void PlayTurretKill()    => _impl.PlayTurretKill();
+    public static void PlayShipExplosion() => _impl.PlayShipExplosion();
+    public static void StartThrust()       => _impl.StartThrust();
+    public static void StopThrust()        => _impl.StopThrust();
 
-    public static void Init()
+    sealed class AudioEngineImpl : AudioEngineBase
     {
 #if HAS_NAUDIO
-        if (_initialized) return;
-        _initialized = true;
-        try
+        ThrustLoop? _thrust;
+#endif
+        public void PlayShoot()
         {
-            _mixer = new MixingSampleProvider(WaveFormat.CreateIeeeFloatWaveFormat(SampleRate, 1));
-            _mixer.ReadFully = true;
-            _output = new WaveOutEvent { DesiredLatency = 60 };
-            _output.Init(_mixer);
-            _output.Play();
+#if HAS_NAUDIO
+            TryPlay(new ShootSound(SampleRate));
+#endif
+            WasmPlay("globalThis.heiauAudio && globalThis.heiauAudio.playShoot();");
         }
-        catch
+        public void PlayRingHit()
         {
-            _output = null;
-            _mixer = null;
+#if HAS_NAUDIO
+            TryPlay(new RingHitSound(SampleRate));
+#endif
+            WasmPlay("globalThis.heiauAudio && globalThis.heiauAudio.playRingHit();");
         }
-#endif
-    }
-
-    public static void Shutdown()
-    {
+        public void PlayTurretFire()
+        {
 #if HAS_NAUDIO
-        _output?.Stop();
-        _output?.Dispose();
-        _output = null;
-        _mixer = null;
-        _initialized = false;
-        _thrust = null;
+            TryPlay(new TurretFireSound(SampleRate));
 #endif
-    }
-
-    public static void PlayShoot()
-    {
+            WasmPlay("globalThis.heiauAudio && globalThis.heiauAudio.playTurretFire();");
+        }
+        public void PlayTurretKill()
+        {
 #if HAS_NAUDIO
-        TryPlay(new ShootSound(SampleRate));
+            TryPlay(new TurretKillSound(SampleRate));
 #endif
-        WasmPlay("globalThis.heiauAudio && globalThis.heiauAudio.playShoot();");
-    }
-
-    public static void PlayRingHit()
-    {
+            WasmPlay("globalThis.heiauAudio && globalThis.heiauAudio.playTurretKill();");
+        }
+        public void PlayShipExplosion()
+        {
 #if HAS_NAUDIO
-        TryPlay(new RingHitSound(SampleRate));
+            TryPlay(new ExplosionSound(SampleRate));
 #endif
-        WasmPlay("globalThis.heiauAudio && globalThis.heiauAudio.playRingHit();");
-    }
-
-    public static void PlayTurretFire()
-    {
+            WasmPlay("globalThis.heiauAudio && globalThis.heiauAudio.playShipExplosion();");
+        }
+        public void StartThrust()
+        {
 #if HAS_NAUDIO
-        TryPlay(new TurretFireSound(SampleRate));
+            if (_thrust != null) return;
+            _thrust = new ThrustLoop(SampleRate);
+            TryPlay(_thrust);
 #endif
-        WasmPlay("globalThis.heiauAudio && globalThis.heiauAudio.playTurretFire();");
-    }
-
-    public static void PlayTurretKill()
-    {
+            WasmPlay("globalThis.heiauAudio && globalThis.heiauAudio.startThrust();");
+        }
+        public void StopThrust()
+        {
 #if HAS_NAUDIO
-        TryPlay(new TurretKillSound(SampleRate));
+            _thrust?.Stop();
+            _thrust = null;
 #endif
-        WasmPlay("globalThis.heiauAudio && globalThis.heiauAudio.playTurretKill();");
-    }
-
-    public static void PlayShipExplosion()
-    {
-#if HAS_NAUDIO
-        TryPlay(new ExplosionSound(SampleRate));
-#endif
-        WasmPlay("globalThis.heiauAudio && globalThis.heiauAudio.playShipExplosion();");
-    }
-
-    public static void StartThrust()
-    {
-#if HAS_NAUDIO
-        if (_thrust != null) return;
-        _thrust = new ThrustLoop(SampleRate);
-        TryPlay(_thrust);
-#endif
-        WasmPlay("globalThis.heiauAudio && globalThis.heiauAudio.startThrust();");
-    }
-
-    public static void StopThrust()
-    {
-#if HAS_NAUDIO
-        _thrust?.Stop();
-        _thrust = null;
-#endif
-        WasmPlay("globalThis.heiauAudio && globalThis.heiauAudio.stopThrust();");
-    }
-
-    static void WasmPlay(string js)
-    {
-#if __WASM__
-        try { Uno.Foundation.WebAssemblyRuntime.InvokeJS(js); } catch { /* fail silent */ }
-#endif
+            WasmPlay("globalThis.heiauAudio && globalThis.heiauAudio.stopThrust();");
+        }
     }
 
 #if HAS_NAUDIO
-    static void TryPlay(ISampleProvider provider)
-    {
-        try { _mixer?.AddMixerInput(provider); } catch { }
-    }
+    // --- Procedural voices ---
 
-    // Square-wave shot bleep, brief.
     sealed class ShootSound : ISampleProvider
     {
         readonly int _sampleRate;
         readonly int _totalSamples;
         int _sample;
         public WaveFormat WaveFormat { get; }
-
         public ShootSound(int sampleRate)
         {
             _sampleRate = sampleRate;
             WaveFormat = WaveFormat.CreateIeeeFloatWaveFormat(sampleRate, 1);
             _totalSamples = (int)(0.07 * sampleRate);
         }
-
         public int Read(float[] buffer, int offset, int count)
         {
             int read = 0;
@@ -153,21 +111,18 @@ public static class AudioEngine
         }
     }
 
-    // Ring hit: short metallic ping — sine + harmonic with fast decay.
     sealed class RingHitSound : ISampleProvider
     {
         readonly int _sampleRate;
         readonly int _totalSamples;
         int _sample;
         public WaveFormat WaveFormat { get; }
-
         public RingHitSound(int sampleRate)
         {
             _sampleRate = sampleRate;
             WaveFormat = WaveFormat.CreateIeeeFloatWaveFormat(sampleRate, 1);
             _totalSamples = (int)(0.18 * sampleRate);
         }
-
         public int Read(float[] buffer, int offset, int count)
         {
             int read = 0;
@@ -184,21 +139,18 @@ public static class AudioEngine
         }
     }
 
-    // Turret fire: deep tom-like hit — short sine with quick pitch drop.
     sealed class TurretFireSound : ISampleProvider
     {
         readonly int _sampleRate;
         readonly int _totalSamples;
         int _sample;
         public WaveFormat WaveFormat { get; }
-
         public TurretFireSound(int sampleRate)
         {
             _sampleRate = sampleRate;
             WaveFormat = WaveFormat.CreateIeeeFloatWaveFormat(sampleRate, 1);
             _totalSamples = (int)(0.18 * sampleRate);
         }
-
         public int Read(float[] buffer, int offset, int count)
         {
             int read = 0;
@@ -215,7 +167,6 @@ public static class AudioEngine
         }
     }
 
-    // Turret kill: descending swell + filtered noise tail. ~1 second.
     sealed class TurretKillSound : ISampleProvider
     {
         readonly int _sampleRate;
@@ -224,14 +175,12 @@ public static class AudioEngine
         int _sample;
         float _filter;
         public WaveFormat WaveFormat { get; }
-
         public TurretKillSound(int sampleRate)
         {
             _sampleRate = sampleRate;
             WaveFormat = WaveFormat.CreateIeeeFloatWaveFormat(sampleRate, 1);
             _totalSamples = (int)(1.0 * sampleRate);
         }
-
         public int Read(float[] buffer, int offset, int count)
         {
             int read = 0;
@@ -250,7 +199,6 @@ public static class AudioEngine
         }
     }
 
-    // Filtered-noise ship explosion.
     sealed class ExplosionSound : ISampleProvider
     {
         readonly int _sampleRate;
@@ -259,14 +207,12 @@ public static class AudioEngine
         int _sample;
         float _filter;
         public WaveFormat WaveFormat { get; }
-
         public ExplosionSound(int sampleRate)
         {
             _sampleRate = sampleRate;
             WaveFormat = WaveFormat.CreateIeeeFloatWaveFormat(sampleRate, 1);
             _totalSamples = (int)(0.4 * sampleRate);
         }
-
         public int Read(float[] buffer, int offset, int count)
         {
             int read = 0;
@@ -282,7 +228,6 @@ public static class AudioEngine
         }
     }
 
-    // Looping rocket thrust.
     sealed class ThrustLoop : ISampleProvider
     {
         readonly int _sampleRate;
@@ -294,20 +239,17 @@ public static class AudioEngine
         const int FadeInSamples  = 2200;
         const int FadeOutSamples = 4400;
         public WaveFormat WaveFormat { get; }
-
         public ThrustLoop(int sampleRate)
         {
             _sampleRate = sampleRate;
             WaveFormat = WaveFormat.CreateIeeeFloatWaveFormat(sampleRate, 1);
         }
-
         public void Stop()
         {
             if (_stopping) return;
             _stopping = true;
             _stopSample = _sample;
         }
-
         public int Read(float[] buffer, int offset, int count)
         {
             int read = 0;

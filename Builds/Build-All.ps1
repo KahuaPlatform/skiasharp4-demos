@@ -22,7 +22,7 @@ $skipped  = @()
 foreach ($s in $scripts) {
     if ($Wasm -and $s -eq 'Build-Uno3dViewer.ps1') {
         Write-Host ""
-        Write-Host "=== $s (skipped — desktop-only) ===" -ForegroundColor DarkYellow
+        Write-Host "=== $s (skipped - desktop-only) ===" -ForegroundColor DarkYellow
         $skipped += $s
         continue
     }

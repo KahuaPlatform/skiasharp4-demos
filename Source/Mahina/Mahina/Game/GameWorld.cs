@@ -56,6 +56,7 @@ public sealed class GameWorld
     GameMode _preWarpMode;
 
     static readonly Random _rng = new();
+    static readonly HighScoreStore HighScoreStore = new("Mahina");
 
     public GameWorld()
     {

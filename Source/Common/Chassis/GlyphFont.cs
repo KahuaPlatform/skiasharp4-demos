@@ -1,0 +1,63 @@
+using System.Collections.Generic;
+using SkiaSharp;
+
+namespace Arcade.Common.Chassis;
+
+// Hand-coded vector glyph font used by the title screens and scrolling marquee.
+// Each character is a short list of line-segment pairs (x1,y1,x2,y2,...) sized
+// to fit a CharWidth × CharHeight box. The retro 5x7-ish look is intentional.
+//
+// Only the characters actually used by the games are included; missing chars
+// just don't render. Add new ones by extending the dictionary below.
+public static class GlyphFont
+{
+    public const float CharWidth  = 40f;
+    public const float CharHeight = 56f;
+    public const float CharGap    = 12f;
+    public const float CharAdvance = CharWidth + CharGap;
+
+    public static readonly Dictionary<char, SKPath> Glyphs = Build();
+
+    static Dictionary<char, SKPath> Build()
+    {
+        float sx = CharWidth  / 4f;
+        float sy = CharHeight / 6f;
+        SKPath G(params float[] coords)
+        {
+            using var b = new SKPathBuilder();
+            for (int i = 0; i + 3 < coords.Length; i += 4)
+            {
+                b.MoveTo(coords[i] * sx, coords[i + 1] * sy);
+                b.LineTo(coords[i + 2] * sx, coords[i + 3] * sy);
+            }
+            return b.Detach();
+        }
+        return new Dictionary<char, SKPath>
+        {
+            ['A'] = G(0,6, 2,0,  2,0, 4,6,  1,4, 3,4),
+            ['B'] = G(0,0, 0,6,  0,0, 3,0,  3,0, 4,1,  4,1, 4,2,  4,2, 3,3,  0,3, 3,3,  3,3, 4,4,  4,4, 4,5,  4,5, 3,6,  3,6, 0,6),
+            ['C'] = G(4,1, 3,0,  3,0, 1,0,  1,0, 0,1,  0,1, 0,5,  0,5, 1,6,  1,6, 3,6,  3,6, 4,5),
+            ['D'] = G(0,0, 0,6,  0,0, 3,0,  3,0, 4,1,  4,1, 4,5,  4,5, 3,6,  3,6, 0,6),
+            ['E'] = G(0,0, 0,6,  0,0, 4,0,  0,3, 3,3,  0,6, 4,6),
+            ['F'] = G(0,0, 0,6,  0,0, 4,0,  0,3, 3,3),
+            ['G'] = G(4,1, 3,0,  3,0, 1,0,  1,0, 0,1,  0,1, 0,5,  0,5, 1,6,  1,6, 3,6,  3,6, 4,5,  4,5, 4,3,  4,3, 2,3),
+            ['H'] = G(0,0, 0,6,  4,0, 4,6,  0,3, 4,3),
+            ['I'] = G(1,0, 3,0,  2,0, 2,6,  1,6, 3,6),
+            ['K'] = G(0,0, 0,6,  0,3, 4,0,  0,3, 4,6),
+            ['L'] = G(0,0, 0,6,  0,6, 4,6),
+            ['M'] = G(0,6, 0,0,  0,0, 2,3,  2,3, 4,0,  4,0, 4,6),
+            ['N'] = G(0,6, 0,0,  0,0, 4,6,  4,6, 4,0),
+            ['O'] = G(1,0, 3,0,  3,0, 4,1,  4,1, 4,5,  4,5, 3,6,  3,6, 1,6,  1,6, 0,5,  0,5, 0,1,  0,1, 1,0),
+            ['P'] = G(0,0, 0,6,  0,0, 3,0,  3,0, 4,1,  4,1, 4,2,  4,2, 3,3,  3,3, 0,3),
+            ['R'] = G(0,0, 0,6,  0,0, 3,0,  3,0, 4,1,  4,1, 4,2,  4,2, 3,3,  3,3, 0,3,  2,3, 4,6),
+            ['S'] = G(4,1, 3,0,  3,0, 1,0,  1,0, 0,1,  0,1, 0,2,  0,2, 1,3,  1,3, 3,3,  3,3, 4,4,  4,4, 4,5,  4,5, 3,6,  3,6, 1,6,  1,6, 0,5),
+            ['T'] = G(0,0, 4,0,  2,0, 2,6),
+            ['U'] = G(0,0, 0,5,  0,5, 1,6,  1,6, 3,6,  3,6, 4,5,  4,5, 4,0),
+            ['V'] = G(0,0, 2,6,  2,6, 4,0),
+            ['W'] = G(0,0, 1,6,  1,6, 2,2,  2,2, 3,6,  3,6, 4,0),
+            ['Y'] = G(0,0, 2,3,  4,0, 2,3,  2,3, 2,6),
+            ['·'] = G(1.7f,3, 2.3f,3),
+            ['4'] = G(3,0, 0,4,  0,4, 4,4,  3,0, 3,6),
+        };
+    }
+}

@@ -1,17 +1,21 @@
+using System;
 using System.IO;
 
-namespace Heiau.Game;
+namespace Arcade.Common;
 
-// Tiny persistence layer for the high score. Writes a single int to a file in the
-// user's local-application-data directory on desktop platforms; no-ops on wasm
-// (where filesystem access requires a different mechanism).
-public static class HighScoreStore
+// Tiny file-backed high-score persistence shared by every neon demo.
+// Writes a single int to %LocalAppData%/<AppName>/highscore.txt on desktop;
+// no-ops on wasm (filesystem access requires a different mechanism there).
+public sealed class HighScoreStore
 {
-    static string SettingsPath => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "Heiau", "highscore.txt");
+    readonly string _appName;
+    public HighScoreStore(string appName) { _appName = appName; }
 
-    public static int Load()
+    string SettingsPath => Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        _appName, "highscore.txt");
+
+    public int Load()
     {
         try
         {
@@ -25,7 +29,7 @@ public static class HighScoreStore
         }
     }
 
-    public static void Save(int score)
+    public void Save(int score)
     {
         try
         {

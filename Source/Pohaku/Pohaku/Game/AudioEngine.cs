@@ -1,140 +1,89 @@
 #if HAS_NAUDIO
 using NAudio.Wave;
-using NAudio.Wave.SampleProviders;
 #endif
 
 namespace Pohaku.Game;
 
-// Procedural sound effects for the game. On net10.0-desktop we synthesise via NAudio
-// (no sample files needed). On net10.0-browserwasm we delegate to the procedural Web
-// Audio voices in Platforms/WebAssembly/WasmScripts/audio.js via JS interop. Other
-// TFMs are no-ops.
+// Procedural sound effects for Pohaku (Asteroids-style vector shooter).
+// Plumbing lives in `Arcade.Common.Audio.AudioEngineBase` — static facade.
 public static class AudioEngine
 {
-#if HAS_NAUDIO
-    const int SampleRate = 44100;
-    static WaveOutEvent? _output;
-    static MixingSampleProvider? _mixer;
-    static bool _initialized;
+    static readonly AudioEngineImpl _impl = new();
+    public static void Init()              => _impl.Init();
+    public static void Shutdown()          => _impl.Shutdown();
+    public static void PlayShoot()         => _impl.PlayShoot();
+    public static void PlayExplosion()     => _impl.PlayExplosion();
+    public static void PlayHyperspace()    => _impl.PlayHyperspace();
+    public static void StartThrust()       => _impl.StartThrust();
+    public static void StopThrust()        => _impl.StopThrust();
+    public static void StartSaucer(bool large) => _impl.StartSaucer(large);
+    public static void StopSaucer()        => _impl.StopSaucer();
 
-    // Stateful (looping) voices — we keep references so we can call Stop() on them.
-    static ThrustLoop? _thrust;
-    static SaucerHum? _saucer;
-#endif
-
-    public static void Init()
+    sealed class AudioEngineImpl : AudioEngineBase
     {
 #if HAS_NAUDIO
-        if (_initialized) return;
-        _initialized = true;
-        try
+        ThrustLoop? _thrust;
+        SaucerHum? _saucer;
+#endif
+
+        public void PlayShoot()
         {
-            _mixer = new MixingSampleProvider(WaveFormat.CreateIeeeFloatWaveFormat(SampleRate, 1));
-            _mixer.ReadFully = true;
-            _output = new WaveOutEvent { DesiredLatency = 60 };
-            _output.Init(_mixer);
-            _output.Play();
+#if HAS_NAUDIO
+            TryPlay(new ShootSound(SampleRate));
+#endif
+            WasmPlay("globalThis.pohakuAudio && globalThis.pohakuAudio.playShoot();");
         }
-        catch
+        public void PlayExplosion()
         {
-            _output = null;
-            _mixer = null;
+#if HAS_NAUDIO
+            TryPlay(new ExplosionSound(SampleRate));
+#endif
+            WasmPlay("globalThis.pohakuAudio && globalThis.pohakuAudio.playExplosion();");
         }
-#endif
-    }
-
-    public static void Shutdown()
-    {
+        public void PlayHyperspace()
+        {
 #if HAS_NAUDIO
-        _output?.Stop();
-        _output?.Dispose();
-        _output = null;
-        _mixer = null;
-        _initialized = false;
-        _thrust = null;
-        _saucer = null;
+            TryPlay(new HyperspaceSound(SampleRate));
 #endif
-    }
-
-    // --- One-shot effects ---
-
-    public static void PlayShoot()
-    {
+            WasmPlay("globalThis.pohakuAudio && globalThis.pohakuAudio.playHyperspace();");
+        }
+        public void StartThrust()
+        {
 #if HAS_NAUDIO
-        TryPlay(new ShootSound(SampleRate));
+            if (_thrust != null) return;
+            _thrust = new ThrustLoop(SampleRate);
+            TryPlay(_thrust);
 #endif
-        WasmPlay("globalThis.pohakuAudio && globalThis.pohakuAudio.playShoot();");
-    }
-
-    public static void PlayExplosion()
-    {
+            WasmPlay("globalThis.pohakuAudio && globalThis.pohakuAudio.startThrust();");
+        }
+        public void StopThrust()
+        {
 #if HAS_NAUDIO
-        TryPlay(new ExplosionSound(SampleRate));
+            _thrust?.Stop();
+            _thrust = null;
 #endif
-        WasmPlay("globalThis.pohakuAudio && globalThis.pohakuAudio.playExplosion();");
-    }
-
-    public static void PlayHyperspace()
-    {
+            WasmPlay("globalThis.pohakuAudio && globalThis.pohakuAudio.stopThrust();");
+        }
+        public void StartSaucer(bool large)
+        {
 #if HAS_NAUDIO
-        TryPlay(new HyperspaceSound(SampleRate));
+            if (_saucer != null) return;
+            _saucer = new SaucerHum(SampleRate, large);
+            TryPlay(_saucer);
 #endif
-        WasmPlay("globalThis.pohakuAudio && globalThis.pohakuAudio.playHyperspace();");
-    }
-
-    // --- Looping voices (call Start when entity becomes active, Stop when it disappears) ---
-
-    public static void StartThrust()
-    {
+            WasmPlay($"globalThis.pohakuAudio && globalThis.pohakuAudio.startSaucer({(large ? "true" : "false")});");
+        }
+        public void StopSaucer()
+        {
 #if HAS_NAUDIO
-        if (_thrust != null) return;
-        _thrust = new ThrustLoop(SampleRate);
-        TryPlay(_thrust);
+            _saucer?.Stop();
+            _saucer = null;
 #endif
-        WasmPlay("globalThis.pohakuAudio && globalThis.pohakuAudio.startThrust();");
-    }
-
-    public static void StopThrust()
-    {
-#if HAS_NAUDIO
-        _thrust?.Stop();
-        _thrust = null;
-#endif
-        WasmPlay("globalThis.pohakuAudio && globalThis.pohakuAudio.stopThrust();");
-    }
-
-    public static void StartSaucer(bool large)
-    {
-#if HAS_NAUDIO
-        if (_saucer != null) return;
-        _saucer = new SaucerHum(SampleRate, large);
-        TryPlay(_saucer);
-#endif
-        WasmPlay($"globalThis.pohakuAudio && globalThis.pohakuAudio.startSaucer({(large ? "true" : "false")});");
-    }
-
-    public static void StopSaucer()
-    {
-#if HAS_NAUDIO
-        _saucer?.Stop();
-        _saucer = null;
-#endif
-        WasmPlay("globalThis.pohakuAudio && globalThis.pohakuAudio.stopSaucer();");
-    }
-
-    static void WasmPlay(string js)
-    {
-#if __WASM__
-        try { Uno.Foundation.WebAssemblyRuntime.InvokeJS(js); } catch { /* fail silent */ }
-#endif
+            WasmPlay("globalThis.pohakuAudio && globalThis.pohakuAudio.stopSaucer();");
+        }
     }
 
 #if HAS_NAUDIO
-    static void TryPlay(ISampleProvider provider)
-    {
-        try { _mixer?.AddMixerInput(provider); } catch { }
-    }
-
     // --- One-shot voices ---
 
     sealed class ShootSound : ISampleProvider
@@ -143,14 +92,12 @@ public static class AudioEngine
         readonly int _totalSamples;
         int _sample;
         public WaveFormat WaveFormat { get; }
-
         public ShootSound(int sampleRate)
         {
             _sampleRate = sampleRate;
             WaveFormat = WaveFormat.CreateIeeeFloatWaveFormat(sampleRate, 1);
             _totalSamples = (int)(0.08 * sampleRate);
         }
-
         public int Read(float[] buffer, int offset, int count)
         {
             int read = 0;
@@ -175,14 +122,12 @@ public static class AudioEngine
         int _sample;
         float _filter;
         public WaveFormat WaveFormat { get; }
-
         public ExplosionSound(int sampleRate)
         {
             _sampleRate = sampleRate;
             WaveFormat = WaveFormat.CreateIeeeFloatWaveFormat(sampleRate, 1);
             _totalSamples = (int)(0.4 * sampleRate);
         }
-
         public int Read(float[] buffer, int offset, int count)
         {
             int read = 0;
@@ -198,9 +143,6 @@ public static class AudioEngine
         }
     }
 
-    // Hyperspace warp: exponential frequency sweep down from 1500Hz to 80Hz with a
-    // chirpy sawtooth + brief noise overlay. ~320ms — quick enough to register as the
-    // ship dematerialising and reappearing somewhere else.
     sealed class HyperspaceSound : ISampleProvider
     {
         readonly int _sampleRate;
@@ -208,21 +150,18 @@ public static class AudioEngine
         readonly Random _rng = new();
         int _sample;
         public WaveFormat WaveFormat { get; }
-
         public HyperspaceSound(int sampleRate)
         {
             _sampleRate = sampleRate;
             WaveFormat = WaveFormat.CreateIeeeFloatWaveFormat(sampleRate, 1);
             _totalSamples = (int)(0.32 * sampleRate);
         }
-
         public int Read(float[] buffer, int offset, int count)
         {
             int read = 0;
             for (int i = 0; i < count && _sample < _totalSamples; i++, _sample++, read++)
             {
                 float t = (float)_sample / _totalSamples;
-                // Exponential descent: starts fast and slows out, so the "drop" feels weighty.
                 float freq = 80f + (1500f - 80f) * MathF.Pow(1f - t, 2.4f);
                 float phase = (_sample * freq / _sampleRate) % 1f;
                 float saw = phase * 2f - 1f;
@@ -234,7 +173,7 @@ public static class AudioEngine
         }
     }
 
-    // --- Looping voices: continue until Stop() is called, then fade out and signal removal ---
+    // --- Looping voices ---
 
     abstract class LoopingVoice : ISampleProvider
     {
@@ -242,7 +181,7 @@ public static class AudioEngine
         protected int _sample;
         bool _stopping;
         int _stopSample;
-        protected const int FadeInSamples  = 4410;  // 100ms @ 44.1kHz
+        protected const int FadeInSamples  = 4410;
         protected const int FadeOutSamples = 4410;
         public WaveFormat WaveFormat { get; }
 
@@ -266,7 +205,7 @@ public static class AudioEngine
             if (_stopping)
             {
                 int since = _sample - _stopSample;
-                if (since >= FadeOutSamples) return -1f;  // signal done
+                if (since >= FadeOutSamples) return -1f;
                 env *= 1f - (float)since / FadeOutSamples;
             }
             return env;
@@ -279,18 +218,14 @@ public static class AudioEngine
     {
         readonly Random _rng = new();
         float _filter;
-
         public ThrustLoop(int sampleRate) : base(sampleRate) { }
-
         public override int Read(float[] buffer, int offset, int count)
         {
             int read = 0;
             for (int i = 0; i < count; i++, _sample++, read++)
             {
                 float env = Envelope();
-                if (env < 0f) return read;  // fade-out complete
-
-                // Bandpass-flavoured white noise — rocket exhaust character
+                if (env < 0f) return read;
                 float noise = (float)(_rng.NextDouble() * 2.0 - 1.0);
                 _filter = _filter * 0.82f + noise * 0.18f;
                 float bp = noise - _filter;
@@ -308,8 +243,6 @@ public static class AudioEngine
 
         public SaucerHum(int sampleRate, bool large) : base(sampleRate)
         {
-            // Large saucer ~70Hz fundamental; small saucer ~140Hz — matches the iconic
-            // arcade convention where the small (deadlier) UFO has the higher pitch.
             _baseFreq     = large ? 70f  : 140f;
             _overtoneFreq = large ? 140f : 280f;
         }
@@ -321,7 +254,6 @@ public static class AudioEngine
             {
                 float env = Envelope();
                 if (env < 0f) return read;
-
                 float t = (float)_sample / _sampleRate;
                 float baseTone = MathF.Sin(2f * MathF.PI * _baseFreq * t);
                 float over     = MathF.Sin(2f * MathF.PI * _overtoneFreq * t);

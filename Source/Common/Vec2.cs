@@ -1,7 +1,10 @@
 using System;
 
-namespace Mahina.Game;
+namespace Arcade.Common;
 
+// Lightweight 2D vector struct shared by every game in the repo. Kept simple —
+// no SIMD, no immutable wrappers — because all the games already accept the
+// "value-type with public mutable fields" trade-off in their gameplay code.
 public struct Vec2
 {
     public float X;

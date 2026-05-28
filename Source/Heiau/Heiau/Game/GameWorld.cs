@@ -63,6 +63,8 @@ public sealed class GameWorld
 
     static readonly Random _rng = new();
 
+    static readonly HighScoreStore HighScoreStore = new("Heiau");
+
     public GameWorld()
     {
         HighScore = HighScoreStore.Load();

@@ -27,9 +27,10 @@
     </UnoFeatures>
   </PropertyGroup>
 
+  <!-- Shared neon chassis at Source/Common/ — pulled in as source so each demo
+       compiles its own copy and can keep its own SkiaSharp version pin. -->
   <ItemGroup>
-    <!-- Brand-mark assets embedded for direct SkiaSharp rendering by Renderer.cs -->
-    <EmbeddedResource Include="Assets\Icons\kahua_snowflake.png" />
+    <Compile Include="..\..\Common\**\*.cs" Link="Common\%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
 
   <!-- The Uno SDK only auto-globs known WasmScripts (AppManifest.js, Fonts.css);

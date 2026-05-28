@@ -27,6 +27,12 @@
     </UnoFeatures>
   </PropertyGroup>
 
+  <!-- Shared neon chassis at Source/Common/ — pulled in as source so each demo
+       compiles its own copy and can keep its own SkiaSharp version pin. -->
+  <ItemGroup>
+    <Compile Include="..\..\Common\**\*.cs" Link="Common\%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+
   <!-- The Uno SDK only auto-globs known WasmScripts (AppManifest.js, Fonts.css);
        arbitrary additional JS files need explicit EmbeddedResource entries so the
        Uno bootstrapper picks them up and loads them into globalThis. -->

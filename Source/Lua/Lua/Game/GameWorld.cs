@@ -51,6 +51,8 @@ public sealed class GameWorld
     public bool BulletCapEnabled = true; // Tempest didn't have a cap, but keep the cheat hook
     public int  MaxPlayerBullets = 8;
 
+    static readonly HighScoreStore HighScoreStore = new("Lua");
+
     public GameWorld()
     {
         HighScore = HighScoreStore.Load();
