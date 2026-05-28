@@ -1,0 +1,34 @@
+<Project Sdk="Uno.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net10.0-browserwasm;net10.0-desktop</TargetFrameworks>
+
+    <OutputType>Exe</OutputType>
+    <UnoSingleProject>true</UnoSingleProject>
+    <SkiaSharpVersion>4.147.0-preview.3.1</SkiaSharpVersion>
+
+    <ApplicationTitle>Uno Skia Demos</ApplicationTitle>
+    <ApplicationId>com.companyname.unoskialauncher</ApplicationId>
+    <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
+    <ApplicationVersion>1</ApplicationVersion>
+    <ApplicationPublisher>Uno Skia Demos</ApplicationPublisher>
+    <Description>A neon arcade catalog of Uno Platform + SkiaSharp demos.</Description>
+
+    <UnoFeatures>
+      SkiaRenderer;
+    </UnoFeatures>
+  </PropertyGroup>
+
+  <!-- Shared neon chassis at Source/Common/. The launcher uses the same neon
+       paints, glyph font, marquee, gradient backdrop, and HUD text helpers as
+       the games so the catalog feels visually part of the same family. -->
+  <ItemGroup>
+    <Compile Include="..\..\Common\**\*.cs" Link="Common\%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Splash background color matches the in-game neon backdrop so the page
+         around the splash image doesn't flash white during wasm bootstrap. -->
+    <UnoSplashScreen Include="Assets\Splash\splash_screen.svg" Color="#050014" />
+  </ItemGroup>
+
+</Project>

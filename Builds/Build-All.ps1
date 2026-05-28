@@ -16,6 +16,8 @@ $scripts = @(
     'Build-Heiau.ps1',
     'Build-Kanapi.ps1',
     'Build-Alaloa.ps1',
+    'Build-Hahai.ps1',
+    'Build-Launcher.ps1',
     'Build-Uno3dViewer.ps1'
 )
 

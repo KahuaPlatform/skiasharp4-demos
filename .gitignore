@@ -147,3 +147,7 @@ coverage*.info
 
 # Local-only logs at the repo root (preserved-but-ignored placeholders if any)
 *.local.log
+
+# Publish-Site.ps1 output — bundled static site for the launcher, regenerated
+# from sources, should not be tracked.
+/publish/

@@ -15,6 +15,8 @@ A consolidated home for several [Uno Platform](https://platform.uno) + [SkiaShar
 | [Heiau](Docs/Heiau/README.md) | net10.0 (wasm / desktop) | Star-Castle-style ring shooter — central pohaku turret with tracking barrel, three counter-rotating segmented energy rings, Asteroids-style player ship, per-level speed escalation, attract mode. | Working |
 | [Kanapi](Docs/Kanapi/README.md) | net10.0 (wasm / desktop) | Centipede-style vector shooter — 30×30 mushroom grid, centipede chain that snakes + bounces + splits on body hits, zigzagging spiders that eat mushrooms, 4-direction player blaster with auto-fire, attract mode. | Working |
 | [Alaloa](Docs/Alaloa/README.md) | net10.0 (wasm / desktop) | Tron-Light-Cycles-style duel — 4 cycles spawn from cardinal edges, continuous motion with 90° turns, per-cell trail-vs-anything collision, look-ahead bot AI, best-of-5 match scoring. | Working |
+| [Hahai](Docs/Hahai/README.md) | net10.0 (wasm / desktop) | Pac-Man-style chase — Honu (sea turtle) eats limu pellets and lehua power flowers while four colored Mo'o (water-spirit lizards) pursue, with classic scatter/chase phases and eyes-return-to-house on devour. | Working |
+| [Launcher](Docs/Launcher/README.md) | net10.0 (wasm / desktop) | Unified neon catalog landing page — card grid of every demo with hover effects + click-to-navigate. Designed for a published static site where each game sits at `/games/<name>/`. | Working |
 | [Uno3dViewer](Source/Uno3dViewer/) | net10.0 (desktop only) | OpenGL 3D model viewer using Silk.NET + Assimp, rendered into Uno's `GLCanvasElement`. | Working |
 
 Each demo's full per-demo docs live in [Docs/](Docs/). The original source repos these were imported from (`UnoGallery`, `Pohaku`, `ProjectNebula`, `Uno3dViewer`) remain untouched at sibling paths under `C:\Repos\`; you can retire them once you've verified the consolidated copies.
@@ -33,6 +35,8 @@ UnoSkiaDemos/
 │   ├── Heiau/
 │   ├── Kanapi/
 │   ├── Alaloa/
+│   ├── Hahai/
+│   ├── Launcher/
 │   └── Uno3dViewer/
 ├── Docs/                    Per-demo READMEs, design docs, screenshots
 │   └── <DemoName>/

@@ -1,0 +1,10 @@
+{
+  "background_color": "#ffffff",
+  "description": "Launcher",
+  "display": "standalone",
+  "name": "Launcher",
+  "short_name": "Launcher",
+  "start_url": "/index.html",
+  "theme_color": "#ffffff",
+  "scope": "/"
+}

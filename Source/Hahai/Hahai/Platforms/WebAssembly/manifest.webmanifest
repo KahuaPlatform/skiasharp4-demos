@@ -1,0 +1,10 @@
+{
+  "background_color": "#ffffff",
+  "description": "Hahai",
+  "display": "standalone",
+  "name": "Hahai",
+  "short_name": "Hahai",
+  "start_url": "/index.html",
+  "theme_color": "#ffffff",
+  "scope": "/"
+}
