@@ -165,7 +165,8 @@ public static class Renderer
         else if (w.Mode == GameMode.GameOver)
         {
             using var bigFont = new SKFont(SKTypeface.FromFamilyName("Consolas", SKFontStyle.Bold), 56);
-            HudText.Draw(c, w.PlacardText == "YOU WIN" ? "YOU WIN" : "GAME OVER",
+            bool playerWon = w.MatchScores[0] >= GameWorld.StartingMatchScore;
+            HudText.Draw(c, playerWon ? "YOU WIN" : "GAME OVER",
                 cw / 2f, ch / 2f, SKTextAlign.Center, bigFont, HudColor);
             HudText.Draw(c, $"FINAL  P1 {w.MatchScores[0]}   P2 {w.MatchScores[1]}   P3 {w.MatchScores[2]}   P4 {w.MatchScores[3]}",
                 cw / 2f, ch / 2f + 50f, SKTextAlign.Center, smallFont, HudColor);

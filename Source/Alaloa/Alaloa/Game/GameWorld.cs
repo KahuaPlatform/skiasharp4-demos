@@ -91,32 +91,39 @@ public sealed class GameWorld
     void SpawnCycles(bool playerControlled)
     {
         Cycles = new Cycle[4];
-        // 4 spawn positions: top heading down, right heading left, bottom heading up,
-        // left heading right. Player is index 0 (bottom). Bots are 1, 2, 3.
-        var spawns = new (Vec2 pos, Direction dir)[]
+        // 4 spawn cells: bottom heading up, left heading right, top heading down,
+        // right heading left. Player is index 0 (bottom). Bots are 1, 2, 3.
+        // Spawn at cell coordinates and snap Position to the cell centre so the
+        // initial trail point aligns with the grid — otherwise the first turn
+        // would produce a diagonal first leg as the polyline kinks from the
+        // off-centre spawn to a centre-aligned turn corner.
+        int mid    = Arena.Cols / 2;            // 45
+        int inset  = 4;                          // 4 cells in from each edge
+        var spawns = new (int col, int row, Direction dir)[]
         {
-            (new Vec2(Arena.WorldW * 0.5f,  Arena.WorldH - SpawnInset), Direction.Up),    // 0 player (bottom)
-            (new Vec2(SpawnInset,           Arena.WorldH * 0.5f),        Direction.Right), // 1 magenta (left)
-            (new Vec2(Arena.WorldW * 0.5f,  SpawnInset),                 Direction.Down),  // 2 yellow (top)
-            (new Vec2(Arena.WorldW - SpawnInset, Arena.WorldH * 0.5f),   Direction.Left),  // 3 green (right)
+            (mid,                  Arena.Rows - 1 - inset, Direction.Up),     // 0 player (bottom)
+            (inset,                mid,                    Direction.Right),  // 1 magenta (left)
+            (mid,                  inset,                  Direction.Down),   // 2 yellow (top)
+            (Arena.Cols - 1 - inset, mid,                  Direction.Left),   // 3 green (right)
         };
 
         for (int i = 0; i < 4; i++)
         {
-            var (col, row) = Arena.WorldToCell(spawns[i].pos);
+            var (col, row, dir) = spawns[i];
+            var centre = Arena.CellCenter(col, row);
             var c = new Cycle
             {
                 OwnerIndex = i,
                 Color      = CycleColors[i],
-                Position   = spawns[i].pos,
+                Position   = centre,
                 HeadCol    = col,
                 HeadRow    = row,
-                Dir        = spawns[i].dir,
-                PendingDir = spawns[i].dir,
+                Dir        = dir,
+                PendingDir = dir,
                 Alive      = true,
                 IsPlayer   = (i == 0 && playerControlled),
             };
-            c.Trail.Add(spawns[i].pos);
+            c.Trail.Add(centre);
             Arena.Mark(col, row, i);
             Cycles[i] = c;
         }
@@ -152,7 +159,15 @@ public sealed class GameWorld
                 if (RoundOverTimer <= 0)
                 {
                     if (MatchOver()) GoToGameOver();
-                    else { Round++; StartRound(); Mode = (MatchScores[0] > 0 || _bestBot() > 0) ? Mode : Mode; Mode = (PreviousAttract ? GameMode.Attract : GameMode.Playing); ShowPlacard($"ROUND {Round}", 1.2f); }
+                    else
+                    {
+                        Round++;
+                        // Restore the pre-round mode BEFORE spawning so the new
+                        // player cycle gets IsPlayer=true (StartRound reads Mode).
+                        Mode = PreviousAttract ? GameMode.Attract : GameMode.Playing;
+                        StartRound();
+                        ShowPlacard($"ROUND {Round}", 1.2f);
+                    }
                 }
                 break;
             case GameMode.GameOver:
@@ -161,11 +176,6 @@ public sealed class GameWorld
         }
     }
     bool PreviousAttract;
-    int _bestBot()
-    {
-        int b = 0; for (int i = 1; i < 4; i++) if (MatchScores[i] > b) b = MatchScores[i];
-        return b;
-    }
 
     bool MatchOver()
     {
@@ -182,7 +192,9 @@ public sealed class GameWorld
             HighScore = MatchScores[0];
             HighScoreStore.Save(HighScore);
         }
-        ShowPlacard(MatchScores[0] >= StartingMatchScore ? "YOU WIN" : "GAME OVER", 3.0f);
+        // No placard — the GameOver branch of DrawHud renders the result text
+        // at full size. Showing the placard here would double up.
+        PlacardTimer = 0f;
     }
 
     void ApplyPlayerInput()
@@ -352,9 +364,17 @@ public sealed class GameWorld
     }
 
     // --- Bot AI ---
-    // Each bot looks at three options (continue / turn-left / turn-right) and
-    // picks the one with the longest open run ahead. Adds slight randomness so
-    // bots don't all act identically and the chase feels alive.
+    //
+    // Each bot evaluates three options every tick: continue forward, turn left,
+    // turn right. Each option gets a composite score:
+    //   - base = open run ahead (defensive — distance before a wall/trail)
+    //   - pursuit bonus if the move closes Manhattan distance to the nearest
+    //     live opponent, penalty if it widens it
+    //   - small random jitter so bots don't all act identically and 1-v-1
+    //     dances stay interesting
+    //
+    // Reversing direction (180°) is always rejected since the cycle's own trail
+    // would kill it instantly.
     void RunBot(Cycle c, float dt)
     {
         c.AiTimer -= dt;
@@ -370,22 +390,77 @@ public sealed class GameWorld
             _               => new[] { c.Dir, c.Dir, c.Dir },
         };
 
-        // Run is the number of empty cells ahead in each direction.
-        int bestRun = -1;
+        // Find the nearest live opponent (Manhattan distance on the grid).
+        Cycle? target = null;
+        int targetDist = int.MaxValue;
+        for (int i = 0; i < Cycles.Length; i++)
+        {
+            var other = Cycles[i];
+            if (other == c || !other.Alive) continue;
+            int d = Math.Abs(other.HeadCol - c.HeadCol) + Math.Abs(other.HeadRow - c.HeadRow);
+            if (d < targetDist) { targetDist = d; target = other; }
+        }
+
+        float bestScore = float.NegativeInfinity;
         Direction best = c.Dir;
         for (int i = 0; i < options.Length; i++)
         {
-            int run = OpenRunFromCell(c.HeadCol, c.HeadRow, options[i], 30);
-            // Slight randomness: give a small bonus to direction changes when
-            // current run is short, so bots break out of straight lines.
-            float wiggle = (float)_rng.NextDouble() * 1.5f;
-            if (run + wiggle > bestRun)
+            var dir = options[i];
+            int run = OpenRunFromCell(c.HeadCol, c.HeadRow, dir, 30);
+            if (run == 0) continue; // immediate crash
+
+            // Defensive base: longer open run is safer. Cap at 12 so a wide-open
+            // direction doesn't completely drown out the pursuit term — once
+            // you have room to manoeuvre, more room isn't a lot more valuable.
+            float score = MathF.Min(12, run);
+
+            // Forward-bias: options[0] is the current direction continued. Give
+            // it a fixed bonus so bots commit to straight runs unless there's
+            // a real reason to turn — without this the AI flicks around because
+            // small score differences between identical-looking options keep
+            // flipping the winner.
+            if (i == 0) score += 4f;
+
+            // Pursuit: if this move closes distance to the target, big bonus;
+            // if it widens it, penalty.
+            if (target != null)
             {
-                bestRun = (int)(run + wiggle);
-                best = options[i];
+                var (dx, dy) = Directions.Delta(dir);
+                int nc = c.HeadCol + dx;
+                int nr = c.HeadRow + dy;
+                int newDist = Math.Abs(target.HeadCol - nc) + Math.Abs(target.HeadRow - nr);
+                if      (newDist < targetDist) score += 6f;
+                else if (newDist > targetDist) score -= 2.5f;
+            }
+
+            // Aggressive blocking: if the target's head sits in this direction's
+            // open run, lean into it — we're literally driving toward them.
+            if (target != null && run >= 1)
+            {
+                var (dx, dy) = Directions.Delta(dir);
+                for (int step = 1; step <= Math.Min(run, 8); step++)
+                {
+                    int cc = c.HeadCol + dx * step;
+                    int rr = c.HeadRow + dy * step;
+                    if (cc == target.HeadCol && rr == target.HeadRow)
+                    {
+                        score += 8f;
+                        break;
+                    }
+                }
+            }
+
+            // Tiny jitter so identical-score options don't always pick the
+            // same one frame-to-frame. Much smaller than before to keep the
+            // AI's path commitments visible to the player.
+            score += (float)_rng.NextDouble() * 0.4f;
+
+            if (score > bestScore)
+            {
+                bestScore = score;
+                best = dir;
             }
         }
-        // Avoid 180° reversals (which would be lethal anyway).
         if (!Directions.IsOpposite(best, c.Dir))
         {
             c.PendingDir = best;
