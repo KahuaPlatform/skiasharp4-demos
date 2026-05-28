@@ -74,6 +74,7 @@ public sealed partial class MainPage : Page
 
         _world.Update(dt);
         GameCanvas.Invalidate();
+        BackgroundCanvas.Invalidate();
     }
 
     void OnKeyDown(object sender, KeyRoutedEventArgs e)

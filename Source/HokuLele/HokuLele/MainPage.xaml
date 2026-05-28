@@ -4,10 +4,25 @@
       xmlns:local="using:HokuLele"
       Background="Black"
       IsTabStop="True">
+  <!-- Three-layer composition:
+       1. BackgroundSurface fills the whole window with a deep-space gradient
+          + ambient drifting starfield. Lives behind the playfield so the side
+          bars feel like the rest of space, not dead area.
+       2. Viewbox constrains the GameSurface to the world's 720×1280 portrait
+          aspect, scaling to fit the window with star-spilled side bars.
+       3. The playfield draws its own gradient + game-specific starfield over
+          the background; a thin neon border (drawn in the Renderer) marks the
+          gameplay boundary. -->
   <Grid Background="Black">
-    <local:GameSurface x:Name="GameCanvas"
-                       IsTabStop="False"
-                       HorizontalAlignment="Stretch"
-                       VerticalAlignment="Stretch" />
+    <local:BackgroundSurface x:Name="BackgroundCanvas"
+                             IsHitTestVisible="False" />
+    <Viewbox Stretch="Uniform"
+             HorizontalAlignment="Center"
+             VerticalAlignment="Center">
+      <local:GameSurface x:Name="GameCanvas"
+                         IsTabStop="False"
+                         Width="720"
+                         Height="1280" />
+    </Viewbox>
   </Grid>
 </Page>

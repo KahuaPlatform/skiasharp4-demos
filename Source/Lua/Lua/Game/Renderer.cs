@@ -213,6 +213,22 @@ public static class Renderer
             (byte)MathF.Round((b + m) * 255f));
     }
 
+    // Thin neon border around the world's logical playfield. Defines where
+    // gameplay begins so the ambient backdrop in the side bars doesn't visually
+    // merge with the playfield. Drawn in world coords (0,0)..(WorldW,WorldH).
+    static void DrawPlayfieldBorder(SKCanvas c, GameWorld world)
+    {
+        var rect = new SKRect(0, 0, world.Width, world.Height);
+        NeonStrokeHalo.StrokeWidth = 6f;
+        NeonStrokeHalo.Color = RimColor.WithAlpha(0x80);
+        c.DrawRect(rect, NeonStrokeHalo);
+        NeonStrokeSharp.StrokeWidth = 1.4f;
+        NeonStrokeSharp.Color = RimColor.WithAlpha(0xC0);
+        c.DrawRect(rect, NeonStrokeSharp);
+        NeonStrokeHalo.StrokeWidth = 5.5f;
+        NeonStrokeSharp.StrokeWidth = 2f;
+    }
+
     static void DrawNeonBackground(SKCanvas c, float cw, float ch)
     {
         using var paint = new SKPaint
@@ -321,6 +337,8 @@ public static class Renderer
 
     static void DrawWorld(SKCanvas canvas, GameWorld world)
     {
+        DrawPlayfieldBorder(canvas, world);
+
         // Particles
         foreach (var p in world.Particles)
         {

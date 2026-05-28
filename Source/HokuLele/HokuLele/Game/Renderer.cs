@@ -67,6 +67,14 @@ public static class Renderer
     // at type-init; case 5 falls back to the stylized snowflake if load fails.
     static readonly SKImage? KahuaSnowflakeImage = LoadEmbeddedImage("HokuLele.Assets.Icons.kahua_snowflake.png");
     static readonly SKSamplingOptions KahuaSnowflakeSampling = new(SKCubicResampler.Mitchell);
+    // Glow halo for the embedded Kahua PNG — ImageFilter blur the image's own colors
+    // outward so the brand-mark enemy reads as the same neon-glow language as the
+    // hand-drawn vector enemies (which use NeonStrokeHalo for the same effect).
+    static readonly SKPaint KahuaGlowPaint = new()
+    {
+        IsAntialias = true,
+        ImageFilter = SKImageFilter.CreateBlur(5f, 5f),
+    };
 
     static SKImage? LoadEmbeddedImage(string resourceName)
     {
@@ -338,6 +346,22 @@ public static class Renderer
             (byte)MathF.Round((b + m) * 255f));
     }
 
+    // Thin neon border around the world's logical playfield. Defines where
+    // gameplay begins so the ambient backdrop in the side bars doesn't visually
+    // merge with the playfield. Drawn in world coords (0,0)..(Width,Height).
+    static void DrawPlayfieldBorder(SKCanvas c, GameWorld world)
+    {
+        var rect = new SKRect(0, 0, world.Width, world.Height);
+        NeonStrokeHalo.StrokeWidth = 6f;
+        NeonStrokeHalo.Color = NeonHudColor.WithAlpha(0x80);
+        c.DrawRect(rect, NeonStrokeHalo);
+        NeonStrokeSharp.StrokeWidth = 1.4f;
+        NeonStrokeSharp.Color = NeonHudColor.WithAlpha(0xC0);
+        c.DrawRect(rect, NeonStrokeSharp);
+        NeonStrokeHalo.StrokeWidth = 5.5f;
+        NeonStrokeSharp.StrokeWidth = 2f;
+    }
+
     static void DrawNeonBackground(SKCanvas c, float cw, float ch)
     {
         using var paint = new SKPaint
@@ -438,6 +462,8 @@ public static class Renderer
 
     static void DrawWorld(SKCanvas canvas, GameWorld world)
     {
+        DrawPlayfieldBorder(canvas, world);
+
         foreach (var p in world.Particles)
         {
             float lifeT = p.Lifetime / MathF.Max(0.001f, p.MaxLife);
@@ -630,6 +656,15 @@ public static class Renderer
                 canvas.Save();
                 canvas.Scale(s);
                 canvas.Translate(-UnoLogoBounds.MidX, -UnoLogoBounds.MidY);
+                // Halo pass: draw each colored arc through NeonFillHalo (a blurred fill).
+                // Skip the black accent dots — blurring black just darkens the surrounding
+                // pixels and looks like grime against the dark background.
+                foreach (var (path, fill) in UnoLogoPaths)
+                {
+                    if (fill == SKColors.Black) continue;
+                    NeonFillHalo.Color = fill.WithAlpha(0xC0);
+                    canvas.DrawPath(path, NeonFillHalo);
+                }
                 foreach (var (path, fill) in UnoLogoPaths)
                 {
                     NeonFillSharp.Color = fill;
@@ -645,7 +680,12 @@ public static class Renderer
                     float scale = TargetSize / MathF.Max(KahuaSnowflakeImage.Width, KahuaSnowflakeImage.Height);
                     float w = KahuaSnowflakeImage.Width  * scale;
                     float h = KahuaSnowflakeImage.Height * scale;
-                    canvas.DrawImage(KahuaSnowflakeImage, new SKRect(-w / 2f, -h / 2f, w / 2f, h / 2f), KahuaSnowflakeSampling);
+                    var rect = new SKRect(-w / 2f, -h / 2f, w / 2f, h / 2f);
+                    // Halo: image with a blur ImageFilter. The image's own orange/red
+                    // colors bleed outward, matching the neon-stroke glow of the other
+                    // enemies. Then draw the sharp image on top.
+                    canvas.DrawImage(KahuaSnowflakeImage, rect, KahuaSnowflakeSampling, KahuaGlowPaint);
+                    canvas.DrawImage(KahuaSnowflakeImage, rect, KahuaSnowflakeSampling);
                 }
                 else
                 {

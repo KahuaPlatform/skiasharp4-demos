@@ -9,18 +9,32 @@
 (function () {
     const NS = (globalThis.hokuLeleAudio = globalThis.hokuLeleAudio || {});
     NS.ctx = null;
+    NS.gestureReceived = false;
+
+    // Browser autoplay policy bans AudioContext creation/resume before a user
+    // gesture. The game starts on a title screen and the attract loop kicks in
+    // after idle time, so we can't rely on game audio being the first call.
+    // Arm a one-time listener on common gestures; until it fires, all audio
+    // calls no-op silently (no console warnings).
+    const arm = () => {
+        if (NS.gestureReceived) return;
+        NS.gestureReceived = true;
+        try {
+            const AC = window.AudioContext || window.webkitAudioContext;
+            NS.ctx = new AC();
+            if (NS.ctx.state === "suspended") NS.ctx.resume();
+        } catch (e) { /* fail silent */ }
+        window.removeEventListener('pointerdown', arm, true);
+        window.removeEventListener('keydown',     arm, true);
+        window.removeEventListener('touchstart',  arm, true);
+    };
+    window.addEventListener('pointerdown', arm, true);
+    window.addEventListener('keydown',     arm, true);
+    window.addEventListener('touchstart',  arm, true);
 
     NS.ensure = function () {
-        if (!NS.ctx) {
-            try {
-                const AC = window.AudioContext || window.webkitAudioContext;
-                NS.ctx = new AC();
-            } catch (e) { return null; }
-        }
-        if (NS.ctx.state === "suspended") {
-            // Returns a Promise but we don't need to await; the next call will play normally.
-            NS.ctx.resume();
-        }
+        if (!NS.gestureReceived || !NS.ctx) return null;
+        if (NS.ctx.state === "suspended") NS.ctx.resume();
         return NS.ctx;
     };
 

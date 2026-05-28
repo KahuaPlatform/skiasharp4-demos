@@ -708,7 +708,14 @@ public class GameWorld
         var pool = new List<Enemy>(Enemies.Count);
         foreach (var e in Enemies)
             if (e.State == EnemyState.InFormation) pool.Add(e);
-        if (pool.Count < 2) return;
+        if (pool.Count == 0) return;
+        if (pool.Count == 1)
+        {
+            // Last survivor — Galaga keeps harassing the player with solo dives
+            // instead of waiting passively in formation to be sniped.
+            LaunchDive(pool[0]);
+            return;
+        }
 
         var first = pool[_rng.Next(pool.Count)];
         pool.Remove(first);
