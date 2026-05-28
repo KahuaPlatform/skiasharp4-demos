@@ -1,0 +1,10 @@
+{
+  "background_color": "#ffffff",
+  "description": "Kanapi",
+  "display": "standalone",
+  "name": "Kanapi",
+  "short_name": "Kanapi",
+  "start_url": "/index.html",
+  "theme_color": "#ffffff",
+  "scope": "/"
+}
