@@ -25,9 +25,9 @@ public static class RingGeometry
         float baseSpeed = 0.35f + level * 0.05f;
         var speeds = new[]
         {
-            +baseSpeed * 0.55f,   // outer — slowest (CCW)
-            -baseSpeed * 0.95f,   // middle (CW)
-            -baseSpeed * 1.70f,   // inner — fastest, counter-rotates outer (CW)
+            +baseSpeed * 0.55f,   // outer — slowest
+            +baseSpeed * 0.95f,   // middle — same direction as outer
+            -baseSpeed * 1.70f,   // inner — fastest, counter-rotates the other two
         };
         // Distinct hue per ring so the rings read as three distinct things.
         var hues = new[] { 200f, 280f, 340f };

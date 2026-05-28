@@ -54,4 +54,10 @@
     <DefineConstants>$(DefineConstants);HAS_NAUDIO</DefineConstants>
   </PropertyGroup>
 
+  <ItemGroup>
+    <!-- Splash background color matches the in-game neon backdrop so the page
+         around the splash image doesn't flash white during wasm bootstrap. -->
+    <UnoSplashScreen Include="Assets\Splash\splash_screen.svg" Color="#050014" />
+  </ItemGroup>
+
 </Project>
