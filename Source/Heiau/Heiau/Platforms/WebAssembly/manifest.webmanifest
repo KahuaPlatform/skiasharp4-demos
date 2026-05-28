@@ -1,0 +1,10 @@
+{
+  "background_color": "#ffffff",
+  "description": "Heiau",
+  "display": "standalone",
+  "name": "Heiau",
+  "short_name": "Heiau",
+  "start_url": "/index.html",
+  "theme_color": "#ffffff",
+  "scope": "/"
+}
