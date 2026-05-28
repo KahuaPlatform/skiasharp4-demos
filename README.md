@@ -11,6 +11,7 @@ A consolidated home for several [Uno Platform](https://platform.uno) + [SkiaShar
 | [KahuaNetwork](Docs/KahuaNetwork/README.md) | net10.0 (wasm / desktop) | Holographic 3D city of glowing towers connected by document-exchange data streams, with a "global view" particle-explode-into-topology-graph effect. | Working |
 | [HokuLele](Docs/HokuLele/README.md) | net10.0 (wasm / desktop) | Galaga-style vector shooter — authentic 5-row formation, multi-flight entries, dive choreographies, tractor-beam captures + dual-fighter rescue, challenge stages, mothership/snowflake brand enemies, procedural audio, attract mode, persistent high score. | Working |
 | [Lua](Docs/Lua/README.md) | net10.0 (wasm / desktop) | Tempest-style vector well-shooter — 10 well shapes (circle / square / plus / V / bowtie / triangle / trapezoid / step / heart / infinity), 4 enemy types (Flippers / Tankers / Spikers / Fuseballs) with spike trails + rim-flipping AI, Super Zapper, warp transition, attract mode. | Working |
+| [Mahina](Docs/Mahina/README.md) | net10.0 (wasm / desktop) | Lunar-Lander-style vector physics game — Apollo LM silhouette, midpoint-displaced terrain with x2/x3/x5 pad multipliers, gravity + thrust + fuel, looping rocket-rumble audio + touchdown chime, per-level difficulty curve, attract mode. | Working |
 | [Uno3dViewer](Source/Uno3dViewer/) | net10.0 (desktop only) | OpenGL 3D model viewer using Silk.NET + Assimp, rendered into Uno's `GLCanvasElement`. | Working |
 
 Each demo's full per-demo docs live in [Docs/](Docs/). The original source repos these were imported from (`UnoGallery`, `Pohaku`, `ProjectNebula`, `Uno3dViewer`) remain untouched at sibling paths under `C:\Repos\`; you can retire them once you've verified the consolidated copies.
@@ -25,6 +26,7 @@ UnoSkiaDemos/
 │   ├── KahuaNetwork/
 │   ├── HokuLele/
 │   ├── Lua/
+│   ├── Mahina/
 │   └── Uno3dViewer/
 ├── Docs/                    Per-demo READMEs, design docs, screenshots
 │   └── <DemoName>/
@@ -95,8 +97,8 @@ The fastest way is to copy an existing demo as a starting point (Pohaku if you w
 The demos deliberately use different versions and feature sets — that's the point of the repo. Don't try to unify SkiaSharp versions or Uno features across them.
 
 - UnoGallery uses a `$(SkiaSharpVersion)`-gated build (defaults to SkiaSharp 3.119.4 stable; pass `-p:SkiaSharpVersion=4.147.0-preview.3.1` to test the v4 preview)
-- Pohaku, HokuLele, and Lua pin SkiaSharp 4.147.0-preview.3.1
+- Pohaku, HokuLele, Lua, and Mahina pin SkiaSharp 4.147.0-preview.3.1
 - KahuaNetwork uses SkiaSharp 3.119.4 + `Uno.WinUI.Graphics2DSK`
 - Uno3dViewer adds Silk.NET (OpenGL + Assimp) and uses `<UnoFeatures>...GLCanvas</UnoFeatures>`
 
-All six share `Uno.Sdk 6.7.0-dev.64` as the MSBuild SDK.
+All seven share `Uno.Sdk 6.7.0-dev.64` as the MSBuild SDK.
