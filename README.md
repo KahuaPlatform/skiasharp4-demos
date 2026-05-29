@@ -86,6 +86,22 @@ The `Builds/` folder has one Build- and one Run- script per demo, plus a `Build-
 
 `Build-All -Wasm` skips Uno3dViewer (no browserwasm TFM); the summary at the end lists what was skipped.
 
+### Launcher + unified static-site deploy
+
+[`Builds/Publish-Site.ps1`](Builds/Publish-Site.ps1) publishes the launcher and every wasm game into a single static-site layout (`publish/site/` with games at `/games/<slug>/`). Drop the output on any plain HTTP host. Full details (path-rewriting, local serve, service-worker hygiene) live in [Docs/Launcher/README.md](Docs/Launcher/README.md).
+
+```powershell
+.\Builds\Publish-Site.ps1
+python -m http.server 8080 --directory .\publish\site
+```
+
+For sub-second tile-launch on the desktop launcher, build every game Release first so the launcher resolves their prebuilt exes instead of falling back to `dotnet run`:
+
+```powershell
+.\Builds\Build-All.ps1 -Configuration Release
+.\Builds\Run-Launcher.ps1
+```
+
 You can also invoke `dotnet` directly. Each demo's csproj lives at `Source/<Demo>/<Demo>/<Demo>.csproj`:
 
 ```powershell
