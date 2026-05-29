@@ -49,10 +49,18 @@ function Publish-WasmApp {
         [Parameter(Mandatory)][string]$Project,
         [Parameter(Mandatory)][string]$Dest
     )
+    $projDir = Split-Path -Parent $Project
+    # Wipe the prior publish output first. Re-publishing into a dirty folder can
+    # leave stale, differently-hashed assets behind and desync the boot manifest:
+    # uno-config.js ends up pointing at an old dotnet.<hash>.js, which boots the
+    # PREVIOUS app assembly (e.g. an old theme default) even though index.html and
+    # the new wasm are present. A clean publish folder guarantees one coherent set.
+    $pubDir = Join-Path $projDir "bin\$Configuration\net10.0-browserwasm\publish"
+    if (Test-Path $pubDir) { Remove-Item $pubDir -Recurse -Force }
+
     dotnet publish $Project -c $Configuration -f net10.0-browserwasm --nologo
     if ($LASTEXITCODE -ne 0) { throw "Publish failed for $Project" }
 
-    $projDir = Split-Path -Parent $Project
     $wwwroot = Join-Path $projDir "bin\$Configuration\net10.0-browserwasm\publish\wwwroot"
     if (-not (Test-Path $wwwroot)) {
         # Some Uno SDK versions emit the static assets at the build-output root
