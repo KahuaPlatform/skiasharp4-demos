@@ -128,11 +128,30 @@ function Repair-RootWebConfig {
     [System.IO.File]::WriteAllBytes($Path, $enc.GetPreamble() + $enc.GetBytes($text))
 }
 
+function Add-SwSkipWaiting {
+    # The generated service worker calls clients.claim() on activate but never
+    # skipWaiting(), so a freshly deployed SW sits in "waiting" and returning
+    # browsers keep being served the previous build until every tab is closed.
+    # Injecting skipWaiting() lets the new SW activate on the next reload, so
+    # deploys propagate without users having to manually clear site data.
+    param([Parameter(Mandatory)][string]$Path)
+    if (-not (Test-Path $Path)) { return }
+    $marker = "console.debug('[ServiceWorker] Installing offline worker');"
+    $bytes  = [System.IO.File]::ReadAllBytes($Path)
+    $hasBom = $bytes.Length -ge 3 -and $bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF
+    $text   = if ($hasBom) { [System.Text.Encoding]::UTF8.GetString($bytes,3,$bytes.Length-3) } else { [System.Text.Encoding]::UTF8.GetString($bytes) }
+    if ($text -match 'skipWaiting' -or -not $text.Contains($marker)) { return }
+    $text = $text.Replace($marker, "$marker`r`n        self.skipWaiting();")
+    $enc = New-Object System.Text.UTF8Encoding($hasBom)
+    [System.IO.File]::WriteAllBytes($Path, $enc.GetPreamble() + $enc.GetBytes($text))
+}
+
 $launcher = Join-Path $repoRoot 'Source\Launcher\Launcher\Launcher.csproj'
 Write-Host ""
 Write-Host "=== Launcher -> $OutputDir ===" -ForegroundColor Yellow
 Publish-WasmApp -Project $launcher -Dest $OutputDir
 Repair-RootWebConfig -Path (Join-Path $OutputDir 'web.config')
+Add-SwSkipWaiting    -Path (Join-Path $OutputDir 'service-worker.js')
 
 foreach ($g in $games) {
     $proj = Join-Path $repoRoot ("Source\{0}\{0}\{0}.csproj" -f $g.Name)
@@ -145,6 +164,7 @@ foreach ($g in $games) {
     # on IIS its repeated mimeMaps + rewrite-rule names become duplicate collection
     # entries -> HTTP 500.19 on /games/<slug>/. Drop it and inherit the root config.
     Remove-Item (Join-Path $dest 'web.config') -Force -ErrorAction SilentlyContinue
+    Add-SwSkipWaiting -Path (Join-Path $dest 'service-worker.js')
 }
 
 Write-Host ""
