@@ -1,42 +1,32 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<svg
-   width="456"
-   height="456"
-   viewBox="0 0 456 456"
-   version="1.1"
-   id="svg453"
-   sodipodi:docname="icon.svg"
-   inkscape:version="1.2 (dc2aedaf03, 2022-05-15)"
-   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
-   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
-   xmlns="http://www.w3.org/2000/svg"
-   xmlns:svg="http://www.w3.org/2000/svg">
-  <defs
-     id="defs457" />
-  <sodipodi:namedview
-     id="namedview455"
-     pagecolor="#ffffff"
-     bordercolor="#000000"
-     borderopacity="0.25"
-     inkscape:showpageshadow="2"
-     inkscape:pageopacity="0.0"
-     inkscape:pagecheckerboard="0"
-     inkscape:deskcolor="#d1d1d1"
-     showgrid="false"
-     inkscape:zoom="1.8574561"
-     inkscape:cx="228.26919"
-     inkscape:cy="228.26919"
-     inkscape:window-width="1920"
-     inkscape:window-height="1027"
-     inkscape:window-x="-8"
-     inkscape:window-y="-8"
-     inkscape:window-maximized="1"
-     inkscape:current-layer="svg453" />
-  <rect
-     x="0"
-     y="0"
-     width="456"
-     height="456"
-     fill="#FFFFFF"
-     id="rect451" />
+<!-- App icon background: Hawaiian sunset sky + ocean, matching the launcher's
+     default "Bob Ross" theme. The setting sun lives in icon_foreground.svg so
+     it sits in the adaptive-icon safe zone; this layer is the full-bleed scene. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="456" height="456" viewBox="0 0 456 456">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0"    stop-color="#23105a"/>
+      <stop offset="0.30" stop-color="#6a2480"/>
+      <stop offset="0.55" stop-color="#c43f74"/>
+      <stop offset="0.72" stop-color="#f76b4e"/>
+      <stop offset="0.80" stop-color="#ffb15a"/>
+    </linearGradient>
+    <linearGradient id="sea" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0"    stop-color="#ff9a55"/>
+      <stop offset="0.18" stop-color="#d05878"/>
+      <stop offset="1"    stop-color="#0a2950"/>
+    </linearGradient>
+  </defs>
+  <!-- sky fills the whole square -->
+  <rect width="456" height="456" fill="url(#sky)"/>
+  <!-- ocean -->
+  <rect y="320" width="456" height="136" fill="url(#sea)"/>
+  <!-- sun-reflection shimmer on the water, centered under the foreground sun -->
+  <g fill="#ffd98a">
+    <rect x="196" y="326" width="64"  height="9" rx="4.5" opacity="0.85"/>
+    <rect x="184" y="345" width="88"  height="9" rx="4.5" opacity="0.70"/>
+    <rect x="200" y="366" width="56"  height="8" rx="4"   opacity="0.58"/>
+    <rect x="178" y="388" width="100" height="8" rx="4"   opacity="0.44"/>
+    <rect x="198" y="410" width="60"  height="7" rx="3.5" opacity="0.32"/>
+  </g>
 </svg>

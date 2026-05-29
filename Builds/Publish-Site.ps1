@@ -103,10 +103,36 @@ function Convert-GameToSubfolderRelative {
     foreach ($t in $targets) { Convert-RootAbsolutePathsInFile -Path $t }
 }
 
+function Repair-RootWebConfig {
+    # The Uno wasm publish emits a web.config that breaks on a stock IIS host:
+    #   1. It adds a ".json" mimeMap without a preceding <remove>, but IIS already
+    #      defines .json (and .wasm) at the server level -> "duplicate collection
+    #      entry" -> HTTP 500.19 on *every* route. We insert the missing <remove>.
+    #   2. ".webmanifest" has no server-level MIME mapping, so the PWA manifest 404s.
+    #      We add it.
+    # Only the site-root (launcher) web.config is kept; per-game ones are deleted
+    # in the loop below (they'd nest under this one and collide).
+    param([Parameter(Mandatory)][string]$Path)
+    if (-not (Test-Path $Path)) { return }
+    $bytes  = [System.IO.File]::ReadAllBytes($Path)
+    $hasBom = $bytes.Length -ge 3 -and $bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF
+    $text   = if ($hasBom) { [System.Text.Encoding]::UTF8.GetString($bytes,3,$bytes.Length-3) } else { [System.Text.Encoding]::UTF8.GetString($bytes) }
+    $jsonMap = '<mimeMap fileExtension=".json" mimeType="application/octet-stream" />'
+    if ($text -notmatch '<remove fileExtension="\.json"') {
+        $text = $text.Replace($jsonMap, "<remove fileExtension=`".json`" />`r`n      $jsonMap")
+    }
+    if ($text -notmatch 'fileExtension="\.webmanifest"') {
+        $text = $text.Replace($jsonMap, "$jsonMap`r`n      <mimeMap fileExtension=`".webmanifest`" mimeType=`"application/manifest+json`" />")
+    }
+    $enc = New-Object System.Text.UTF8Encoding($hasBom)
+    [System.IO.File]::WriteAllBytes($Path, $enc.GetPreamble() + $enc.GetBytes($text))
+}
+
 $launcher = Join-Path $repoRoot 'Source\Launcher\Launcher\Launcher.csproj'
 Write-Host ""
 Write-Host "=== Launcher -> $OutputDir ===" -ForegroundColor Yellow
 Publish-WasmApp -Project $launcher -Dest $OutputDir
+Repair-RootWebConfig -Path (Join-Path $OutputDir 'web.config')
 
 foreach ($g in $games) {
     $proj = Join-Path $repoRoot ("Source\{0}\{0}\{0}.csproj" -f $g.Name)
@@ -115,6 +141,10 @@ foreach ($g in $games) {
     Write-Host ("=== {0} -> games/{1}/ ===" -f $g.Name, $g.Slug) -ForegroundColor Yellow
     Publish-WasmApp -Project $proj -Dest $dest
     Convert-GameToSubfolderRelative -GameDir $dest
+    # The per-game web.config is byte-identical to the launcher's; nested under it
+    # on IIS its repeated mimeMaps + rewrite-rule names become duplicate collection
+    # entries -> HTTP 500.19 on /games/<slug>/. Drop it and inherit the root config.
+    Remove-Item (Join-Path $dest 'web.config') -Force -ErrorAction SilentlyContinue
 }
 
 Write-Host ""
