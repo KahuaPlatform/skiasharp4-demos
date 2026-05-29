@@ -4,6 +4,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Launcher.Game;
+using Windows.System;
 
 namespace Launcher;
 
@@ -21,6 +22,21 @@ public sealed partial class MainPage : Page
         Unloaded += OnUnloaded;
         PointerMoved += OnPointerMoved;
         PointerPressed += OnPointerPressed;
+        KeyDown += OnKeyDown;
+    }
+
+    void OnKeyDown(object sender, KeyRoutedEventArgs e)
+    {
+        // T toggles between the neon arcade catalog and the Hawaiian Bob Ross
+        // painted theme. Keep the toggle launcher-only so a held key during a
+        // click doesn't churn state across other input handlers.
+        if (e.Key == VirtualKey.T)
+        {
+            _world.Theme = _world.Theme == LauncherTheme.Neon
+                ? LauncherTheme.BobRoss
+                : LauncherTheme.Neon;
+            e.Handled = true;
+        }
     }
 
     void OnLoaded(object sender, RoutedEventArgs e)
