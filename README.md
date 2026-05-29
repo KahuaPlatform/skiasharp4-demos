@@ -114,7 +114,8 @@ dotnet run --project Source/Pohaku/Pohaku/Pohaku.csproj -f net10.0-browserwasm
 1. Create `Source/<NewDemo>/<NewDemo>/<NewDemo>.csproj` plus `Directory.Build.props`, `Directory.Packages.props`, `global.json`, and `<NewDemo>.sln` in `Source/<NewDemo>/`. Don't add anything build-related at the repo root — that would cascade into the other demos' MSBuild trees and break their isolation.
 2. Add `Builds/Build-<NewDemo>.ps1` and `Builds/Run-<NewDemo>.ps1` following the existing pattern.
 3. Append the script name to the `$scripts` array in `Builds/Build-All.ps1`.
-4. Add `Docs/<NewDemo>/README.md`.
+4. Add an `Entry(...)` to [`Source/Launcher/Launcher/Game/GameCatalog.cs`](Source/Launcher/Launcher/Game/GameCatalog.cs) so the launcher shows a tile for it, and append the slug to the `$games` array in [`Builds/Publish-Site.ps1`](Builds/Publish-Site.ps1) so it gets bundled into the static site.
+5. Add `Docs/<NewDemo>/README.md`.
 
 The fastest way is to copy an existing demo as a starting point (Pohaku if you want vector+neon, UnoGallery if you want the full SKCanvasElement scene + effects pipeline).
 
@@ -123,8 +124,8 @@ The fastest way is to copy an existing demo as a starting point (Pohaku if you w
 The demos deliberately use different versions and feature sets — that's the point of the repo. Don't try to unify SkiaSharp versions or Uno features across them.
 
 - UnoGallery uses a `$(SkiaSharpVersion)`-gated build (defaults to SkiaSharp 3.119.4 stable; pass `-p:SkiaSharpVersion=4.147.0-preview.3.1` to test the v4 preview)
-- Pohaku, HokuLele, Lua, Mahina, Heiau, Kanapi, and Alaloa pin SkiaSharp 4.147.0-preview.3.1
+- Pohaku, HokuLele, Lua, Mahina, Heiau, Kanapi, Alaloa, Hahai, and Launcher pin SkiaSharp 4.147.0-preview.3.1
 - KahuaNetwork uses SkiaSharp 3.119.4 + `Uno.WinUI.Graphics2DSK`
 - Uno3dViewer adds Silk.NET (OpenGL + Assimp) and uses `<UnoFeatures>...GLCanvas</UnoFeatures>`
 
-All ten share `Uno.Sdk 6.7.0-dev.64` as the MSBuild SDK. Six of them (HokuLele, Lua, Mahina, Heiau, Kanapi, Alaloa) share a neon-game chassis from `Source/Common/` (see [Source/Common](Source/Common/)).
+All twelve share `Uno.Sdk 6.7.0-dev.64` as the MSBuild SDK. Eight of them (HokuLele, Lua, Mahina, Heiau, Kanapi, Alaloa, Hahai, Launcher) share a neon-game chassis from `Source/Common/` (see [Source/Common](Source/Common/)).
