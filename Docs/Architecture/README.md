@@ -16,7 +16,7 @@ Architecture-level documentation for the UnoSkiaDemos repository. Per-demo speci
 
 ## Mermaid rendering
 
-All diagrams in these docs use [Mermaid](https://mermaid.js.org/) fenced code blocks. GitHub renders them inline; in VS Code install the **Markdown Preview Mermaid Support** extension (`bierner.markdown-mermaid`) and the previews work in `Ctrl+Shift+V`.
+All diagrams in these docs use [Mermaid](https://mermaid.js.org/) fenced code blocks. GitHub renders them inline, and VS Code's built-in Markdown preview (`Ctrl+Shift+V`) renders them natively — no extension required.
 
 ## Reading order
 
