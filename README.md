@@ -19,7 +19,7 @@ A consolidated home for several [Uno Platform](https://platform.uno) + [SkiaShar
 | [Launcher](Docs/Launcher/README.md) | net10.0 (wasm / desktop) | Unified neon catalog landing page — card grid of every demo with hover effects + click-to-navigate. Designed for a published static site where each game sits at `/games/<name>/`. | Working |
 | [Uno3dViewer](Source/Uno3dViewer/) | net10.0 (desktop only) | OpenGL 3D model viewer using Silk.NET + Assimp, rendered into Uno's `GLCanvasElement`. | Working |
 
-Each demo's full per-demo docs live in [Docs/](Docs/). The original source repos these were imported from (`UnoGallery`, `Pohaku`, `ProjectNebula`, `Uno3dViewer`) remain untouched at sibling paths under `C:\Repos\`; you can retire them once you've verified the consolidated copies.
+Each demo's full per-demo docs live in [Docs/](Docs/). Cross-cutting architecture (chassis, rendering pipeline, audio, build/deploy, launcher dispatch) is documented in [Docs/Architecture/](Docs/Architecture/README.md). The original source repos these were imported from (`UnoGallery`, `Pohaku`, `ProjectNebula`, `Uno3dViewer`) remain untouched at sibling paths under `C:\Repos\`; you can retire them once you've verified the consolidated copies.
 
 ## Layout
 
