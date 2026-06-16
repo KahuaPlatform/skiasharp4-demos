@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" width="600" height="600">
+  <defs>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="6" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <rect width="600" height="600" fill="#050014"/>
+  <!-- subtle grid lines, low contrast -->
+  <g stroke="#1a2244" stroke-width="1" stroke-opacity="0.55">
+    <line x1="40" y1="180" x2="560" y2="180"/>
+    <line x1="40" y1="420" x2="560" y2="420"/>
+    <line x1="180" y1="40" x2="180" y2="560"/>
+    <line x1="420" y1="40" x2="420" y2="560"/>
+  </g>
+  <!-- thin neon playfield border -->
+  <rect x="40" y="40" width="520" height="520" fill="none" stroke="#66FFAA" stroke-opacity="0.35" stroke-width="6" filter="url(#glow)"/>
+  <rect x="40" y="40" width="520" height="520" fill="none" stroke="#66FFAA" stroke-opacity="0.75" stroke-width="1.5"/>
+  <!-- cell shapes -->
+  <circle cx="300" cy="260" r="60" fill="#66FFAA" fill-opacity="0.3" stroke="#66FFAA" stroke-width="2" filter="url(#glow)"/>
+  <circle cx="300" cy="260" r="20" fill="#FFFFFF" fill-opacity="0.5"/>
+  <circle cx="180" cy="360" r="30" fill="#FF33CC" fill-opacity="0.3" stroke="#FF33CC" stroke-width="1.5" filter="url(#glow)"/>
+  <circle cx="420" cy="200" r="40" fill="#33F8FF" fill-opacity="0.3" stroke="#33F8FF" stroke-width="1.5" filter="url(#glow)"/>
+  <!-- game name with neon glow -->
+  <text x="300" y="460" text-anchor="middle"
+        font-family="Consolas, 'Courier New', monospace" font-size="96" font-weight="bold"
+        fill="#66FFAA" filter="url(#glow)">PAKU</text>
+  <!-- subtitle -->
+  <text x="300" y="510" text-anchor="middle"
+        font-family="Consolas, 'Courier New', monospace" font-size="22"
+        fill="#5577AA">UNO PLATFORM &#xB7; SKIASHARP</text>
+</svg>
