@@ -10,7 +10,6 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageVersion Include="SkiaSharp" Version="3.119.4" />
-    <PackageVersion Include="SkiaSharp.Views.Uno.WinUI" Version="3.119.4" />
     <PackageVersion Include="Uno.WinUI.Graphics2DSK" Version="6.7.0-dev.215" />
   </ItemGroup>
 </Project>

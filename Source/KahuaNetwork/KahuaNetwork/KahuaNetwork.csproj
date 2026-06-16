@@ -28,7 +28,6 @@
 
   <ItemGroup>
     <PackageReference Include="SkiaSharp" />
-    <PackageReference Include="SkiaSharp.Views.Uno.WinUI" />
     <PackageReference Include="Uno.WinUI.Graphics2DSK" />
   </ItemGroup>
 
