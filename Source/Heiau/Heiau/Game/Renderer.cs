@@ -3,11 +3,13 @@ using SkiaSharp;
 
 namespace Heiau.Game;
 
-// Heiau renderer — Star-Castle-style ring shooter. All shared chassis pieces
-// (neon paints, vector glyph font, marquee, gradients, playfield border, hud
-// text helpers) come from `Arcade.Common.Chassis` via globally-imported usings.
-// This file owns the game-specific draws: rings as arc segments, central
-// turret, Asteroids ship, Sparx, and the HUD layout.
+/// <summary>
+/// All of Heiau's drawing. Shared chassis (neon paints, glyph font, marquee,
+/// gradients, playfield border, HUD text) comes from <c>Arcade.Common.Chassis</c>
+/// via global usings; this file owns the game-specific draws: the rings as
+/// hue-shifting arc segments, the central turret + barrel, the Asteroids ship,
+/// the Spark mines, and the HUD/title.
+/// </summary>
 public static class Renderer
 {
     // --- Game-specific palette ---
@@ -33,6 +35,7 @@ public static class Renderer
 
     // --- Render entry point ---
 
+    /// <summary>Renders one frame: background, rings + turret + ship + sparks, then the HUD.</summary>
     public static void Render(SKCanvas canvas, GameWorld world, float canvasW, float canvasH)
     {
         NeonBackground.Draw(canvas, canvasW, canvasH);

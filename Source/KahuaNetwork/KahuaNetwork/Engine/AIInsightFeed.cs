@@ -3,6 +3,11 @@ using System.Collections.Generic;
 
 namespace KahuaNetwork.Engine;
 
+/// <summary>
+/// The rotating "AI" narration feed: periodically emits network-flow insights
+/// (routed RFIs, trending turnaround, auto-route confirmations) shown in the HUD
+/// activity panel to convey that intelligence is observing the network.
+/// </summary>
 internal sealed class AIInsightFeed
 {
     private readonly Random _rng = new();
@@ -73,6 +78,7 @@ internal sealed class AIInsightFeed
     }
 }
 
+/// <summary>The flavor of an insight (drives its accent color in the feed).</summary>
 internal enum InsightKind
 {
     Info,
@@ -80,4 +86,5 @@ internal enum InsightKind
     Win,
 }
 
+/// <summary>One feed entry: its text, timestamp, kind, and optional originating org.</summary>
 internal sealed record Insight(string Text, DateTime At, InsightKind Kind, Building? Site);

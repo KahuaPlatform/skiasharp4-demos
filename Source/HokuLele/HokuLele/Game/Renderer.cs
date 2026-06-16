@@ -4,11 +4,13 @@ using SkiaSharp;
 
 namespace HokuLele.Game;
 
-// HokuLele renderer — Galaga-style vector shooter. Shared chassis pieces come
-// from `Arcade.Common.Chassis` via globally-imported usings. This file owns
-// the game-specific draws: player + 6 enemy archetypes (4 hand-drawn + Uno
-// brand-mark + Kahua brand-mark), tractor beam, captive ship, scrolling
-// starfield (top-down vertical — gameplay-relevant).
+/// <summary>
+/// All of HokuLele's drawing. Shared chassis pieces (neon paints, glyph font,
+/// marquee, HUD text) come from <c>Arcade.Common.Chassis</c> via global usings;
+/// this file owns the game-specific draws: the player ship + 6 enemy archetypes
+/// (4 hand-drawn vector silhouettes + the Uno brand-mark mothership + the Kahua
+/// snowflake), the tractor beam, the trailing captive ship, and the HUD/title.
+/// </summary>
 public static class Renderer
 {
     // --- Game-specific palette ---
@@ -236,6 +238,7 @@ public static class Renderer
 
     // --- Render entry point ---
 
+    /// <summary>Renders one frame: background, world entities, then the screen-space HUD/title.</summary>
     public static void Render(SKCanvas canvas, GameWorld world, float canvasW, float canvasH)
     {
         UpdateStars(world.Width, world.Height);

@@ -3,10 +3,12 @@ using SkiaSharp;
 
 namespace Alaloa.Game;
 
-// Alaloa renderer — Tron-Light-Cycles-style. Shared chassis comes from
-// `Arcade.Common.Chassis` via global usings. This file owns the
-// game-specific draws: arena grid backdrop, neon trails (polyline per cycle),
-// cycle heads, HUD scoreboard.
+/// <summary>
+/// All of Alaloa's drawing. Shared chassis comes from <c>Arcade.Common.Chassis</c>
+/// via global usings; this file owns the game-specific draws: the arena grid
+/// backdrop, a neon trail polyline per cycle, the cycle heads + nose dots, and the
+/// HUD scoreboard / title.
+/// </summary>
 public static class Renderer
 {
     static readonly SKColor GridLineColor = new(0x22, 0x44, 0x66, 0x40);
@@ -14,6 +16,7 @@ public static class Renderer
 
     const string MarqueeText = "ALALOA · UNO PLATFORM · SKIASHARP 4 · NEON LIGHT CYCLES";
 
+    /// <summary>Renders one frame: grid backdrop, trails + cycle heads + particles, then the HUD.</summary>
     public static void Render(SKCanvas canvas, GameWorld world, float canvasW, float canvasH)
     {
         NeonBackground.Draw(canvas, canvasW, canvasH);

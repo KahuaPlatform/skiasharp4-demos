@@ -3,10 +3,13 @@ using SkiaSharp;
 
 namespace Kanapi.Game;
 
-// Kanapi renderer — Centipede-style. Shared chassis (neon paints, glyph font,
-// marquee, gradient backdrop, playfield border, HUD text) comes from
-// `Arcade.Common.Chassis`. This file owns the game-specific draws: mushroom
-// field, centipede chains, spider, player blaster, bullets.
+/// <summary>
+/// All of Kanapi's drawing. Shared chassis (neon paints, glyph font, marquee,
+/// gradient backdrop, playfield border, HUD text) comes from
+/// <c>Arcade.Common.Chassis</c>; this file owns the game-specific draws: the
+/// HP-aware mushroom field, centipede chains (head + body + eyes), the animated
+/// spider, the player blaster, bullets, and the HUD/title.
+/// </summary>
 public static class Renderer
 {
     static readonly SKColor MushroomColor    = new(0x66, 0xFF, 0xAA);
@@ -24,6 +27,7 @@ public static class Renderer
 
     const string MarqueeText = "KANAPI · UNO PLATFORM · SKIASHARP 4 · NEON CENTIPEDE";
 
+    /// <summary>Renders one frame: background + player-zone tint, mushrooms, entities, then the HUD.</summary>
     public static void Render(SKCanvas canvas, GameWorld world, float canvasW, float canvasH)
     {
         NeonBackground.Draw(canvas, canvasW, canvasH);

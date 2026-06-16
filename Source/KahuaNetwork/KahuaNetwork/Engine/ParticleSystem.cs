@@ -5,6 +5,10 @@ using SkiaSharp;
 
 namespace KahuaNetwork.Engine;
 
+/// <summary>
+/// Owns the particle pool: emission, per-frame integration (velocity, drag,
+/// gravity, choreographed targets), and the additive glow+core rendering pass.
+/// </summary>
 internal sealed class ParticleSystem
 {
     private readonly List<Particle> _particles = new(8192);

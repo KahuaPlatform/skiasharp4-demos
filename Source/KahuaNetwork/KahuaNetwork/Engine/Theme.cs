@@ -2,6 +2,7 @@ using SkiaSharp;
 
 namespace KahuaNetwork.Engine;
 
+/// <summary>The shared neon palette (backgrounds, grid, role accents) and risk gradient for the demo.</summary>
 internal static class Theme
 {
     public static readonly SKColor Background = new(0x05, 0x07, 0x12);

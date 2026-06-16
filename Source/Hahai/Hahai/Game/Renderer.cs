@@ -3,10 +3,13 @@ using SkiaSharp;
 
 namespace Hahai.Game;
 
-// Hahai renderer — Hawaiian-themed chase game. Honu (sea turtle) eats limu
-// (sea grass dots), Lehua flowers act as the power pellets, and four Mo'o
-// (water-spirit lizards) pursue. Mechanics mirror Pac-Man but the visual
-// vocabulary is shells, petals, and serpentine tails.
+/// <summary>
+/// All of Hahai's drawing. Shared chassis comes from <c>Arcade.Common.Chassis</c>;
+/// this file owns the Hawaiian visual vocabulary: the glowing reef maze, limu
+/// (sea-grass pellets) and pulsing five-petal lehua (power pellets), the Honu
+/// shell + scutes + head, the four Mo'o (body + wobble tail + legs + eyes), and
+/// the HUD (gated to non-Playing modes so it never competes with the maze).
+/// </summary>
 public static class Renderer
 {
     static readonly SKColor WallColor    = new(0x22, 0x77, 0xFF);   // reef coral cyan-blue
@@ -26,6 +29,7 @@ public static class Renderer
 
     const string MarqueeText = "HAHAI  -  HONU VS MO'O  -  NEON CHASE  -  UNO PLATFORM + SKIASHARP 4";
 
+    /// <summary>Renders one frame: background, maze + pellets, Honu + Mo'o + particles, then the HUD.</summary>
     public static void Render(SKCanvas canvas, GameWorld world, float canvasW, float canvasH)
     {
         NeonBackground.Draw(canvas, canvasW, canvasH);

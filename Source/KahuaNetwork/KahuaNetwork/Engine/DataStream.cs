@@ -4,6 +4,10 @@ using SkiaSharp;
 
 namespace KahuaNetwork.Engine;
 
+/// <summary>
+/// A document exchange between two organizations, drawn as a glowing 3D bezier
+/// with pulses (and trailing tails) traveling along it in the exchange's color.
+/// </summary>
 internal sealed class DataStream
 {
     public Building From { get; set; } = null!;

@@ -8,6 +8,11 @@ using Windows.System;
 
 namespace Pohaku;
 
+/// <summary>
+/// Hosts the playfield and drives Pohaku's game loop on
+/// <c>CompositionTarget.Rendering</c> (vsync-aligned). Translates key/pointer
+/// events into the ship's input flags; <c>V</c> toggles vibrant mode.
+/// </summary>
 public sealed partial class MainPage : Page
 {
     private readonly GameWorld _world = new();
@@ -16,6 +21,8 @@ public sealed partial class MainPage : Page
     private bool _rendering;
 
     private bool _left, _right, _up, _fire;
+    // Latched "pressed this frame" flags so a single tap fires/hyperspaces exactly
+    // once even though the key may stay physically held; cleared after consumption.
     private bool _firePressedThisFrame;
     private bool _hyperPressedThisFrame;
 
@@ -53,6 +60,8 @@ public sealed partial class MainPage : Page
         }
     }
 
+    // One compositor frame: compute dt (clamped to [1/60, 1/30]), push input into
+    // the ship while Playing, step the world, and request the next paint.
     private void OnRendering(object? sender, object e)
     {
         var now = _clock.Elapsed;

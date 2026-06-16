@@ -5,12 +5,14 @@ namespace Lua.Game;
 
 // --- Game-mode and wave-state enums ---
 
+/// <summary>Top-level game state. <c>Warp</c> is the between-levels dive down the well.</summary>
 public enum GameMode { Title, Playing, GameOver, Attract, Warp }
 
-// --- Player ("blaster") ---
-// Lives on the rim (depth = 0). Segment is the index of the segment its claw
-// straddles. SegmentT (0..1) is the parametric position WITHIN that segment
-// while sliding to an adjacent one (smooth animation).
+/// <summary>
+/// The player "blaster" / claw. Lives on the rim (depth 0); <see cref="Segment"/>
+/// is the segment its claw straddles and <see cref="SegmentT"/> animates the
+/// slide to an adjacent segment.
+/// </summary>
 public sealed class Player
 {
     public int Segment;
@@ -37,8 +39,10 @@ public sealed class Player
 //
 //  Fuseball: Travels along the EDGES of segments (vertex-to-vertex), not the body.
 //            Hard to hit unless directly aligned with its current vertex.
+/// <summary>The four Tempest foes; see the comment above for each one's behavior.</summary>
 public enum EnemyKind { Flipper, Tanker, Spiker, Fuseball }
 
+/// <summary>Per-enemy behavior state.</summary>
 public enum EnemyState
 {
     Climbing,     // moving from far end toward rim
@@ -48,6 +52,7 @@ public enum EnemyState
     Dead,         // marked for removal
 }
 
+/// <summary>An enemy climbing the well. <see cref="Kind"/> + <see cref="State"/> select its behavior.</summary>
 public sealed class Enemy
 {
     public EnemyKind Kind;
@@ -65,6 +70,7 @@ public sealed class Enemy
     public int   HitsToKill = 1;      // tankers might take 1 hit but spawn 2 flippers
 }
 
+/// <summary>A Spiker's trail: a vertical hazard line in one segment that can kill during warp.</summary>
 public sealed class Spike
 {
     public int   Segment;
@@ -76,6 +82,7 @@ public sealed class Spike
 // --- Bullets ---
 // Player bullets travel from rim (depth=0) to far end (depth=1+); enemy bullets
 // travel the other direction. We use one type with a "FromPlayer" flag.
+/// <summary>A shot in one segment travelling along depth; <see cref="FromPlayer"/> sets direction.</summary>
 public sealed class Bullet
 {
     public int   Segment;
@@ -85,7 +92,7 @@ public sealed class Bullet
     public float Life;       // safety guard so bullets always die eventually
 }
 
-// --- Particles for explosions / spawn flashes ---
+/// <summary>A short-lived explosion / spawn-flash particle (purely visual).</summary>
 public sealed class Particle
 {
     public Vec2  Pos;
@@ -96,7 +103,7 @@ public sealed class Particle
     public float Size = 2.5f;
 }
 
-// --- Score popups (e.g. "+150" floating up after a kill) ---
+/// <summary>A floating "+score" number shown briefly after a kill.</summary>
 public sealed class ScorePopup
 {
     public Vec2  Pos;

@@ -15,6 +15,8 @@ namespace Hahai.Game;
 //
 // The two tunnel rows on the sides of the middle row let Pac and ghosts wrap
 // horizontally; everything else is bounded by walls.
+
+/// <summary>The kind of a single maze cell.</summary>
 public enum Tile : byte
 {
     Open,
@@ -24,12 +26,23 @@ public enum Tile : byte
     Tunnel,
 }
 
+/// <summary>
+/// The 28×31 maze: a fixed ASCII layout parsed into a <see cref="Tile"/> grid plus
+/// parallel pellet / power-dot grids the <c>GameWorld</c> mutates as Pac eats.
+/// Also exposes walkability, tunnel-wrap, cell↔world, and per-ghost scatter-corner
+/// helpers.
+/// </summary>
 public sealed class Arena
 {
+    /// <summary>Maze columns.</summary>
     public const int   Cols      = 28;
+    /// <summary>Maze rows.</summary>
     public const int   Rows      = 31;
+    /// <summary>Cell edge length in world units.</summary>
     public const float CellSize  = 24f;
+    /// <summary>World width (672).</summary>
     public const float WorldW    = Cols * CellSize;   // 672
+    /// <summary>World height (744).</summary>
     public const float WorldH    = Rows * CellSize;   // 744
 
     // Classic-ish Pac-Man maze. Rows are top-down. 28 chars wide each.
@@ -96,7 +109,7 @@ public sealed class Arena
         }
     }
 
-    // Reset pellets/power-dots back to the spawn layout (used at level start).
+    /// <summary>Restores pellets and power-dots to the spawn layout (called at level start).</summary>
     public void ResetPellets()
     {
         RemainingPellets = 0;
@@ -114,6 +127,10 @@ public sealed class Arena
         }
     }
 
+    /// <summary>
+    /// True if (col,row) can be entered: in-bounds and not a wall (and not the ghost
+    /// door unless <paramref name="allowDoor"/>, which only eaten ghosts get).
+    /// </summary>
     public bool IsWalkable(int col, int row, bool allowDoor = false)
     {
         if (col < 0 || col >= Cols || row < 0 || row >= Rows) return false;
@@ -123,12 +140,15 @@ public sealed class Arena
         return true;
     }
 
+    /// <summary>True if (col,row) is a tunnel cell (the side-wrap corridors).</summary>
     public bool IsTunnel(int col, int row) =>
         row >= 0 && row < Rows && col >= 0 && col < Cols && Tiles[col, row] == Tile.Tunnel;
 
+    /// <summary>World-space center of cell (col,row).</summary>
     public static Vec2 CellCenter(int col, int row) =>
         new(col * CellSize + CellSize * 0.5f, row * CellSize + CellSize * 0.5f);
 
+    /// <summary>Maps a world point to its (col,row) cell.</summary>
     public static (int col, int row) WorldToCell(Vec2 p)
     {
         int c = (int)MathF.Floor(p.X / CellSize);
@@ -136,8 +156,10 @@ public sealed class Arena
         return (c, r);
     }
 
-    // Standard Pac-Man scatter corners (one per ghost kind). Used as the
-    // chase-state "go home" target during Scatter phases.
+    /// <summary>
+    /// The classic per-ghost scatter corner — the "go home" target each ghost
+    /// heads to during Scatter phases.
+    /// </summary>
     public static (int col, int row) ScatterCorner(GhostKind k) => k switch
     {
         GhostKind.Blinky => (Cols - 2, 1),

@@ -5,6 +5,7 @@ using SkiaSharp;
 
 namespace KahuaNetwork.Engine;
 
+/// <summary>Phases of the Global View "wow" sequence.</summary>
 internal enum WowState
 {
     Idle,
@@ -13,6 +14,11 @@ internal enum WowState
     Reforming,
 }
 
+/// <summary>
+/// State machine for the Global View set-piece: shatter the city into particles,
+/// reassemble them into the live network topology graph, then morph back into the
+/// city. Drives both the choreography timing and the topology node/edge overlay.
+/// </summary>
 internal sealed class WowEffect
 {
     private readonly SceneRenderer _scene;
@@ -265,6 +271,7 @@ internal sealed class WowEffect
     }
 }
 
+/// <summary>A node in the Global-View topology graph: its org plus animated screen placement.</summary>
 internal sealed class TopologyNode
 {
     public Vector3 Position;

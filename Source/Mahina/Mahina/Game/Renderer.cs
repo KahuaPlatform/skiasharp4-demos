@@ -3,11 +3,12 @@ using SkiaSharp;
 
 namespace Mahina.Game;
 
-// Mahina renderer — Lunar-Lander vector physics game. Shared chassis pieces
-// (neon paints, vector glyph font, marquee, gradients, playfield border, HUD
-// text helpers) come from `Arcade.Common.Chassis` via globally-imported usings.
-// This file owns the game-specific draws: terrain polyline, landing pads, LM
-// silhouette, HUD readouts.
+/// <summary>
+/// All of Mahina's drawing. Shared chassis (neon paints, glyph font, marquee,
+/// gradients, playfield border, HUD text) comes from <c>Arcade.Common.Chassis</c>
+/// via global usings; this file owns the game-specific draws: the terrain
+/// polyline, landing pads, the LM silhouette + thrust flame, and the HUD readouts.
+/// </summary>
 public static class Renderer
 {
     static readonly SKColor LanderBody     = new(0xCC, 0xEE, 0xFF);
@@ -21,6 +22,7 @@ public static class Renderer
 
     const string MarqueeText = "MAHINA · UNO PLATFORM · SKIASHARP 4 · NEON LUNAR LANDER";
 
+    /// <summary>Renders one frame: background, terrain + pads, lander + particles, then the HUD.</summary>
     public static void Render(SKCanvas canvas, GameWorld world, float canvasW, float canvasH)
     {
         NeonBackground.Draw(canvas, canvasW, canvasH);

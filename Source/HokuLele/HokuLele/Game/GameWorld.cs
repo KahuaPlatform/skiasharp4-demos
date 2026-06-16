@@ -1,12 +1,20 @@
 namespace HokuLele.Game;
 
+/// <summary>Top-level game state for HokuLele's Galaga-style shooter.</summary>
 public enum GameMode { Title, Playing, GameOver, Attract }
+
+/// <summary>Sub-state of a wave: the choreography phase the formation is in.</summary>
 public enum WaveState { Spawning, Settling, Attacking, Placard, Cleared }
 
-// Wave choreography skeleton. Spawns a 4×6 formation enemy-by-enemy on
-// alternating left/right entry streams, settles for a beat, then launches
-// pair-dives every PairAttackInterval seconds. No collisions yet — bullets
-// fire and miss, enemies dive past and exit.
+/// <summary>
+/// The per-frame brain for HokuLele — a full Galaga clone. Spawns a 40-strong
+/// formation (4+8+8+10+10) enemy-by-enemy on alternating left/right entry
+/// streams, settles into a "breathing" grid, then launches pair-dives. Implements
+/// collisions/scoring, stage progression, periodic challenge stages, a mystery
+/// flyby bonus target, and the tractor-beam capture → dual-fighter rescue
+/// set-piece. The <see cref="Renderer"/> reads this state; <c>MainPage</c> feeds
+/// input and calls <see cref="Update"/> once per compositor frame.
+/// </summary>
 public class GameWorld
 {
     public float Width  = 720f;
@@ -109,23 +117,27 @@ public class GameWorld
 
     static readonly HighScoreStore HighScoreStore = new("HokuLele");
 
+    /// <summary>Loads the high score and resets to the title screen.</summary>
     public GameWorld()
     {
         HighScore = HighScoreStore.Load();
         ResetForTitle();
     }
 
+    /// <summary>Updates the logical world size from the canvas, with sane minimums.</summary>
     public void Resize(float w, float h)
     {
         Width  = MathF.Max(360f, w);
         Height = MathF.Max(480f, h);
     }
 
+    /// <summary>Begins a fresh player-controlled game at stage 1.</summary>
     public void StartGame()
     {
         StartGameInternal(GameMode.Playing);
     }
 
+    /// <summary>Begins the self-playing attract loop (bot pilots, near-infinite lives).</summary>
     public void StartAttract()
     {
         StartGameInternal(GameMode.Attract);
@@ -153,6 +165,7 @@ public class GameWorld
         StartNormalWave();
     }
 
+    /// <summary>Returns to the title screen (used by Esc / attract exit).</summary>
     public void ReturnToTitle()
     {
         ResetForTitle();
@@ -229,6 +242,7 @@ public class GameWorld
     float CurrentEnemyFireMax()       => MathF.Max(0.45f, EnemyFireMax       - (Stage - 1) * 0.05f);
     float CurrentDiveDuration()       => MathF.Max(1.80f, DiveDuration       - (Stage - 1) * 0.08f);
 
+    /// <summary>Clears all entities and parks the player at the title screen.</summary>
     public void ResetForTitle()
     {
         Mode = GameMode.Title;
@@ -244,6 +258,10 @@ public class GameWorld
         };
     }
 
+    /// <summary>
+    /// Fires the player's shot(s) if allowed by the cooldown and the Galaga-style
+    /// on-screen bullet cap (doubled when the dual-fighter wingman is active).
+    /// </summary>
     public void FireBullet()
     {
         if (Player.ShootCooldown > 0 || !Player.Alive) return;
@@ -277,6 +295,10 @@ public class GameWorld
         AudioEngine.PlayShoot();
     }
 
+    /// <summary>
+    /// Advances the game one frame: title-idle→attract, attract AI, player motion,
+    /// the wave state machine, entity motion, then collisions and dead-entity reaping.
+    /// </summary>
     public void Update(float dt)
     {
         WaveTime += dt;
@@ -1041,8 +1063,12 @@ public class GameWorld
         }
     }
 
-    // --- Player + projectiles + particles (unchanged from skeleton) ---
+    // --- Player + projectiles + particles ---
 
+    // Drives the player ship: while dead, runs the capture/death/respawn logic
+    // (don't respawn mid-capture; otherwise wait out DeathDelay then respawn or go
+    // to game over); while alive, applies horizontal movement, clamps to the
+    // playfield, and ticks the shoot cooldown + invincibility timers.
     void UpdatePlayer(float dt)
     {
         if (!Player.Alive)

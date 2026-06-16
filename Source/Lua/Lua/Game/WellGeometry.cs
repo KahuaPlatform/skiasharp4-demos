@@ -17,16 +17,30 @@ namespace Lua.Game;
 // Segments:
 //   N rim vertices form N-1 (open) or N (closed) segments. Segment i is the polyline
 //   edge between RimPoints[i] and RimPoints[(i+1) % N].
+/// <summary>
+/// The Tempest playfield "well": a rim polyline projected toward a central
+/// vanishing point. Provides the perspective projection plus the per-segment
+/// geometry queries (midpoint, direction, normal, length, neighbour stepping)
+/// the player and enemies use to walk and climb the tube.
+/// </summary>
 public sealed class Well
 {
+    /// <summary>World-space center; also the vanishing point.</summary>
     public Vec2 Center;
+    /// <summary>Rim (z=0) vertex positions in world space.</summary>
     public Vec2[] RimPoints = Array.Empty<Vec2>();
+    /// <summary>True if the rim wraps (player can circle); false for open shapes.</summary>
     public bool Closed;
+    /// <summary>Which shape this well was built as.</summary>
     public WellShape Shape;
+    /// <summary>Number of segments (N for closed, N-1 for open).</summary>
     public int SegmentCount => Closed ? RimPoints.Length : RimPoints.Length - 1;
 
-    // Project a rim point inward by depth z (0 = rim, 1 = vanishing point).
-    // The perspective curve is 1/(1+k*z) which gives a strong tunnel-in effect.
+    /// <summary>
+    /// Projects a rim point inward by depth <paramref name="z"/> (0 = rim, 1 =
+    /// vanishing point). The perspective curve <c>1/(1+k·z)</c> gives the strong
+    /// tunnel-in effect.
+    /// </summary>
     public Vec2 Project(Vec2 rim, float z)
     {
         float zClamped = Math.Clamp(z, 0f, 1f);
@@ -35,10 +49,10 @@ public sealed class Well
                         Center.Y + (rim.Y - Center.Y) * s);
     }
 
-    // Project a vertex by index, with depth.
+    /// <summary>Projects rim vertex <paramref name="i"/> at depth <paramref name="z"/>.</summary>
     public Vec2 ProjectVertex(int i, float z) => Project(RimPoints[i], z);
 
-    // Midpoint of segment s at depth z, in world space.
+    /// <summary>World-space midpoint of segment <paramref name="s"/> at depth <paramref name="z"/>.</summary>
     public Vec2 SegmentMid(int s, float z)
     {
         var a = RimPoints[s];
@@ -47,7 +61,7 @@ public sealed class Well
         return Project(mid, z);
     }
 
-    // Direction along segment s at the rim, pointing from vertex s -> s+1.
+    /// <summary>Unit direction along segment <paramref name="s"/> at the rim (vertex s → s+1).</summary>
     public Vec2 SegmentDir(int s)
     {
         var a = RimPoints[s];
@@ -55,15 +69,17 @@ public sealed class Well
         return new Vec2(b.X - a.X, b.Y - a.Y).Normalized();
     }
 
-    // Outward-facing normal at segment s, in world space (points away from Center).
-    // Used to anchor the player claw and enemy shapes on the rim.
+    /// <summary>
+    /// Outward-facing unit normal at segment <paramref name="s"/> (points away
+    /// from <see cref="Center"/>). Used to anchor the player claw + enemies on the rim.
+    /// </summary>
     public Vec2 SegmentNormal(int s)
     {
         var mid = (RimPoints[s] + RimPoints[(s + 1) % RimPoints.Length]) * 0.5f;
         return (mid - Center).Normalized();
     }
 
-    // Length of segment s at the rim.
+    /// <summary>Rim length of segment <paramref name="s"/>.</summary>
     public float SegmentLength(int s)
     {
         var a = RimPoints[s];
@@ -71,8 +87,11 @@ public sealed class Well
         return (b - a).Length;
     }
 
-    // Step a segment index by +/-1 with the well's open/closed wrap rules.
-    // Returns the new index or -1 if the move would step off an open end.
+    /// <summary>
+    /// Steps a segment index by <paramref name="delta"/> applying the well's
+    /// open/closed wrap rules. Returns the new index, or -1 if the move would step
+    /// off an open end.
+    /// </summary>
     public int Step(int seg, int delta)
     {
         int n = SegmentCount;
@@ -84,11 +103,14 @@ public sealed class Well
 
     public const float PerspectiveK = 4.0f; // strong tunnel-in effect
 
-    // Visual: every well slot alternates between two cool colors at the rim.
-    // Used by the renderer to paint alternating segment lines for retro contrast.
+    /// <summary>
+    /// True for odd segments; the renderer paints alternate segments a different
+    /// cool color for retro contrast.
+    /// </summary>
     public bool IsAlternateSlot(int s) => (s & 1) == 1;
 }
 
+/// <summary>The ten Tempest well silhouettes cycled per level.</summary>
 public enum WellShape
 {
     Circle,        // closed 16-gon
@@ -103,10 +125,10 @@ public enum WellShape
     InfinityLoop,  // open infinity sign
 }
 
+/// <summary>Factory for the ten well shapes plus the per-level shape schedule.</summary>
 public static class Wells
 {
-    // Tempest levels cycle through shapes with increasing difficulty (faster enemies,
-    // higher spawn counts, deadlier mixes). Each level picks a shape by (level-1) % N.
+    /// <summary>The order shapes cycle through as levels advance.</summary>
     public static readonly WellShape[] LevelOrder =
     {
         WellShape.Circle,
@@ -121,10 +143,11 @@ public static class Wells
         WellShape.InfinityLoop,
     };
 
+    /// <summary>Returns the well shape for a 1-based <paramref name="level"/> (wraps).</summary>
     public static WellShape ForLevel(int level) =>
         LevelOrder[Math.Max(0, level - 1) % LevelOrder.Length];
 
-    // Build a well of the given shape, centred at (cx, cy), with a base radius r.
+    /// <summary>Builds a well of the given <paramref name="shape"/> centered at (cx, cy) with base radius r.</summary>
     public static Well Build(WellShape shape, float cx, float cy, float r)
     {
         var w = new Well { Center = new Vec2(cx, cy), Shape = shape };

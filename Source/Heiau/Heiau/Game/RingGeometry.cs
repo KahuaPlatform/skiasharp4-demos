@@ -2,17 +2,22 @@ using System;
 
 namespace Heiau.Game;
 
-// Builders + collision helpers for the rotating energy rings around the central
-// turret. Three concentric rings, counter-rotating, each divided into N angular
-// segments. Each segment's "alive" state is independent — bullets destroy
-// individual segments and pass through any gap.
+/// <summary>
+/// Builders + collision helpers for the three concentric, counter-rotating
+/// energy rings around the turret. Each ring is N independently-destructible
+/// angular segments; bullets destroy a single segment and pass through any gap.
+/// </summary>
 public static class RingGeometry
 {
+    /// <summary>Angular segments in every ring.</summary>
     public const int SegmentsPerRing = 12;
-    public const float SegmentHalfArc = MathF.PI / SegmentsPerRing;  // 15° in radians
+    /// <summary>Half-arc of one segment, in radians (15°).</summary>
+    public const float SegmentHalfArc = MathF.PI / SegmentsPerRing;
 
-    // Build the standard ring layout for the level. Higher levels spin faster
-    // and reverse direction more aggressively.
+    /// <summary>
+    /// Builds the three-ring layout for <paramref name="level"/> (higher = faster
+    /// spin + tougher segments). Returns outer→inner.
+    /// </summary>
     public static Ring[] BuildRings(int level)
     {
         // Outer / middle / inner radii (world units around a 900-wide square).
@@ -56,8 +61,10 @@ public static class RingGeometry
         return rings;
     }
 
-    // Test whether a world point is inside the angular wedge of an alive segment
-    // at the ring's current rotation. Returns the segment index if hit, else -1.
+    /// <summary>
+    /// Returns the index of the live segment that <paramref name="point"/> hits
+    /// (must be near the ring radius AND inside a non-destroyed wedge), or -1.
+    /// </summary>
     public static int HitSegment(Ring ring, Vec2 worldCenter, Vec2 point, float tolerance = 4f)
     {
         float dx = point.X - worldCenter.X;
@@ -80,7 +87,7 @@ public static class RingGeometry
         return ring.IsAlive(k) ? k : -1;
     }
 
-    // Wrap angle into [-π, π].
+    /// <summary>Wraps an angle into [-π, π].</summary>
     public static float WrapAngle(float a)
     {
         a = (a + MathF.PI) % MathF.Tau;

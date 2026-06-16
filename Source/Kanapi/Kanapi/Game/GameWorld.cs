@@ -3,10 +3,12 @@ using System.Collections.Generic;
 
 namespace Kanapi.Game;
 
-// Centipede-style game. Centipede snakes down the mushroom field; the player
-// (a small blaster in the bottom zone) shoots it apart and clears mushrooms.
-// Spiders bounce around the player zone eating mushrooms too. World is a
-// 720×720 square aligned to a 30×30 mushroom grid (24px cells).
+/// <summary>
+/// The per-frame brain for Kanapi, a Centipede clone (720×720 over a 30×30
+/// mushroom grid). Runs the centipede grid AI (advance / bounce-and-drop / split
+/// on hit), player movement + auto-fire, spider movement, collisions, scoring,
+/// per-level field regeneration, the mode state machine, and the attract autopilot.
+/// </summary>
 public sealed class GameWorld
 {
     public const float WorldW = 720f;
@@ -61,6 +63,7 @@ public sealed class GameWorld
         ResetForTitle();
     }
 
+    /// <summary>No-op: world coords are fixed and the renderer letterboxes.</summary>
     public void Resize(float w, float h) { /* fixed coords */ }
 
     void ResetForTitle()
@@ -78,6 +81,7 @@ public sealed class GameWorld
         };
     }
 
+    /// <summary>Starts a fresh player-controlled game at level 1.</summary>
     public void StartGame()
     {
         Mode = GameMode.Playing;
@@ -88,6 +92,7 @@ public sealed class GameWorld
         ShowPlacard($"LEVEL {Level}", 1.4f);
     }
 
+    /// <summary>Starts the self-playing attract demo (autopilot, near-infinite lives).</summary>
     public void StartAttract()
     {
         StartGame();
@@ -95,6 +100,7 @@ public sealed class GameWorld
         LivesLeft = 9999;
     }
 
+    /// <summary>Returns to the title screen and rebuilds the idle field.</summary>
     public void ReturnToTitle()
     {
         Mode = GameMode.Title;
@@ -147,12 +153,14 @@ public sealed class GameWorld
         Chains.Add(chain);
     }
 
+    /// <summary>Shows a centered placard (e.g. "LEVEL 2") for <paramref name="seconds"/>.</summary>
     public void ShowPlacard(string text, float seconds)
     {
         PlacardText = text;
         PlacardTimer = seconds;
     }
 
+    /// <summary>Advances the game one frame; dispatches on <see cref="Mode"/>.</summary>
     public void Update(float dt)
     {
         if (PlacardTimer > 0) PlacardTimer -= dt;

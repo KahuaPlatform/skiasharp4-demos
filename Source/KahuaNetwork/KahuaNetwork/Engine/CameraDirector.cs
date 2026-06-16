@@ -3,6 +3,11 @@ using System.Numerics;
 
 namespace KahuaNetwork.Engine;
 
+/// <summary>
+/// Drives the camera cinematically: a slow idle orbit around the network, and a
+/// smooth focus-on-organization move when a tower is selected (and back when
+/// deselected).
+/// </summary>
 internal sealed class CameraDirector
 {
     public Camera3D Camera { get; }

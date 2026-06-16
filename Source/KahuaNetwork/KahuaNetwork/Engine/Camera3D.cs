@@ -4,6 +4,10 @@ using SkiaSharp;
 
 namespace KahuaNetwork.Engine;
 
+/// <summary>
+/// A simple perspective camera (position + yaw/pitch + FOV) that projects world
+/// points to screen space for the city renderer.
+/// </summary>
 internal sealed class Camera3D
 {
     public Vector3 Position { get; set; } = new(0, 220, 520);
@@ -30,6 +34,11 @@ internal sealed class Camera3D
     public Matrix4x4 ProjectionMatrix =>
         Matrix4x4.CreatePerspectiveFieldOfView(FieldOfView, ViewportWidth / ViewportHeight, Near, Far);
 
+    /// <summary>
+    /// Projects a world point to <paramref name="screen"/> pixels and its camera-space
+    /// <paramref name="depth"/>. Returns false if the point is behind the camera
+    /// (caller should cull it).
+    /// </summary>
     public bool Project(Vector3 world, out SKPoint screen, out float depth)
     {
         var v = Vector4.Transform(new Vector4(world, 1f), ViewMatrix);

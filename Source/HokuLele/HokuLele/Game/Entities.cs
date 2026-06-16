@@ -1,7 +1,10 @@
 namespace HokuLele.Game;
 
-// Minimal entity skeletons for a vertically-scrolling shooter.
+// Model types for the Galaga-style vertical shooter. Positions/velocities are in
+// world coords (720×1280 portrait). The renderer reads these; GameWorld mutates
+// them each frame.
 
+/// <summary>The player fighter (and, after a rescue, its dual-fighter wingman).</summary>
 public class Player
 {
     public Vec2 Position;
@@ -19,6 +22,7 @@ public class Player
     public float WingmanOffsetX = 22f;  // wingman is drawn this many pixels to the right
 }
 
+/// <summary>The choreography phase a single enemy is currently performing.</summary>
 public enum EnemyState
 {
     Entering,           // sweeping in from off-screen along an entry path
@@ -31,6 +35,11 @@ public enum EnemyState
     ReturnWithCapture,  // post-beam: flying back to formation with the captive trailing
 }
 
+/// <summary>
+/// An enemy ship. Its <see cref="State"/> selects which path/behavior runs each
+/// frame; the remaining fields are the parameters that choreography needs
+/// (formation slot, path progress, dive curl, beam hover position, etc.).
+/// </summary>
 public class Enemy
 {
     public Vec2 Position;
@@ -72,6 +81,7 @@ public class Enemy
     public bool HasCaptive;
 }
 
+/// <summary>A projectile. <see cref="FromPlayer"/> distinguishes player vs enemy shots.</summary>
 public class Bullet
 {
     public Vec2 Position;
@@ -82,6 +92,7 @@ public class Bullet
     public float Lifetime = 2.5f;
 }
 
+/// <summary>A short-lived explosion spark. Purely visual.</summary>
 public class Particle
 {
     public Vec2 Position;
@@ -91,6 +102,7 @@ public class Particle
     public uint Color;  // packed AARRGGBB; matches SKColor(uint)
 }
 
+/// <summary>A floating "+score" number shown briefly at a kill site.</summary>
 public class ScorePopup
 {
     public Vec2 Position;

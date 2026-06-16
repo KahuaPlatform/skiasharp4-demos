@@ -5,6 +5,13 @@ using SkiaSharp;
 
 namespace Pohaku.Game;
 
+/// <summary>
+/// All of Pohaku's drawing. Branches on <c>world.VibrantMode</c> between a muted
+/// retro-green look and a synthwave neon look (every shape drawn twice — a blurred
+/// halo then a sharp core). Also owns the cached vector ship/glyph paths, the
+/// per-frame asteroid/saucer path building, and the perspective-tilted marquee.
+/// See <c>Docs/Pohaku/README.md</c> for the SkiaSharp-4 idioms and the marquee math.
+/// </summary>
 public static class Renderer
 {
     // Retro palette
@@ -218,6 +225,10 @@ public static class Renderer
 
     // --- Render entry point ---
 
+    /// <summary>
+    /// Renders one frame: shared background + world-fit transform, then the
+    /// retro or vibrant entity pass, then the HUD on the unscaled canvas.
+    /// </summary>
     public static void Render(SKCanvas canvas, GameWorld world, float canvasW, float canvasH)
     {
         bool vib = world.VibrantMode;

@@ -3,11 +3,14 @@ using System.Collections.Generic;
 
 namespace Lua.Game;
 
-// Tempest-style well shooter. Top-level state machine + per-frame Update().
-//
-// World coordinates are 720 × 1280 (portrait 9:16). The Well sits roughly in the
-// upper half (Center.Y at ~0.42·H) so the bottom of the screen is free for HUD
-// and the player's claw is drawn at the largest size on the bottom of the rim.
+/// <summary>
+/// The per-frame brain for Lua, a Tempest-style well shooter: the mode state
+/// machine, enemy spawning + AI (flippers/tankers/spikers/fuseballs), bullet and
+/// spike handling, collisions/scoring, super-zapper, the between-levels warp, and
+/// the attract-mode autopilot. World coords are 720×1280 portrait; the
+/// <see cref="Well"/> sits in the upper half so the bottom is free for the HUD and
+/// the player's claw is drawn largest on the near rim.
+/// </summary>
 public sealed class GameWorld
 {
     // --- World dimensions ---
@@ -60,6 +63,7 @@ public sealed class GameWorld
         Player.Segment = Player.TargetSegment = Well.SegmentCount / 2;
     }
 
+    /// <summary>No-op: world coords are fixed at 720×1280 and the renderer letterboxes.</summary>
     public void Resize(float w, float h)
     {
         // World coordinates are fixed at 720×1280; the renderer letterboxes onto
@@ -72,6 +76,7 @@ public sealed class GameWorld
 
     // --- Game lifecycle ---
 
+    /// <summary>Starts a fresh player-controlled game at level 1.</summary>
     public void StartGame()
     {
         Mode = GameMode.Playing;
@@ -91,6 +96,7 @@ public sealed class GameWorld
         ShowPlacard($"LEVEL {Level}", 1.6f);
     }
 
+    /// <summary>Starts the self-playing attract demo (autopilot, generous zapper).</summary>
     public void StartAttract()
     {
         StartGame();
@@ -98,6 +104,7 @@ public sealed class GameWorld
         Player.SuperZapperUsesLeft = 9; // attract AI uses zapper liberally
     }
 
+    /// <summary>Returns to the title screen and clears the playfield.</summary>
     public void ReturnToTitle()
     {
         Mode = GameMode.Title;
@@ -128,6 +135,7 @@ public sealed class GameWorld
         NextSpawnTimer          = 0.9f;
     }
 
+    /// <summary>Shows a centered placard (e.g. "LEVEL 3") for <paramref name="seconds"/>.</summary>
     public void ShowPlacard(string text, float seconds)
     {
         PlacardText = text;
@@ -136,6 +144,7 @@ public sealed class GameWorld
 
     // --- Per-frame update ---
 
+    /// <summary>Advances the game one frame; dispatches on <see cref="Mode"/>.</summary>
     public void Update(float dt)
     {
         if (PlacardTimer > 0) PlacardTimer -= dt;
@@ -226,6 +235,7 @@ public sealed class GameWorld
         }
     }
 
+    /// <summary>Fires a player shot from the current segment, subject to cooldown + bullet cap.</summary>
     public void FireBullet()
     {
         if (Mode != GameMode.Playing && Mode != GameMode.Attract) return;
@@ -251,6 +261,10 @@ public sealed class GameWorld
         return n;
     }
 
+    /// <summary>
+    /// Uses one super-zapper charge (2 per level): the first use clears all
+    /// on-screen enemies, the second kills one at random.
+    /// </summary>
     public void TriggerSuperZapper()
     {
         if (Mode != GameMode.Playing && Mode != GameMode.Attract) return;

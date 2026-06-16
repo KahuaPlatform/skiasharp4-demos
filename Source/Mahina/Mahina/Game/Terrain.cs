@@ -3,12 +3,12 @@ using System.Collections.Generic;
 
 namespace Mahina.Game;
 
-// Builds randomized lunar surface terrain — a midpoint-displaced polyline along
-// the bottom of the world, with N flat landing pads of varying widths inserted
-// in place of the natural slope at chosen X positions.
-//
-// Returned terrain is in world coordinates (smaller Y = higher in the air,
-// larger Y = ground level).
+/// <summary>
+/// Builds randomized lunar terrain — a midpoint-displaced polyline along the
+/// world bottom with flat landing pads of varying widths spliced in. Also exposes
+/// the <see cref="HeightAt"/> / <see cref="PadAt"/> queries the physics uses for
+/// collision and landing detection. World coords: smaller Y = higher up.
+/// </summary>
 public static class TerrainBuilder
 {
     // Multiplier choices and their pad widths (in world pixels). Narrower pads
@@ -20,6 +20,10 @@ public static class TerrainBuilder
         (2, 100f),  // wide / safe
     };
 
+    /// <summary>
+    /// Generates a terrain for <paramref name="level"/> (higher = craggier + a
+    /// harder pad mix), sized to <paramref name="worldW"/>×<paramref name="worldH"/>.
+    /// </summary>
     public static Terrain Build(int level, float worldW, float worldH, Random rng)
     {
         const int Resolution = 64;
@@ -136,7 +140,7 @@ public static class TerrainBuilder
         list.Add(p);
     }
 
-    // Walk terrain segments and find the Y for a given X. Used for collision tests.
+    /// <summary>Returns the terrain surface Y at world X <paramref name="x"/> (linear within a segment).</summary>
     public static float HeightAt(Terrain t, float x)
     {
         if (t.Points.Length == 0) return 0;
@@ -155,7 +159,7 @@ public static class TerrainBuilder
         return t.Points[^1].Y;
     }
 
-    // Find the pad (if any) whose X-range contains the given X.
+    /// <summary>Returns the landing pad whose X-range contains <paramref name="x"/>, or null.</summary>
     public static LandingPad? PadAt(Terrain t, float x)
     {
         foreach (var p in t.Pads)

@@ -2,6 +2,7 @@ using SkiaSharp;
 
 namespace KahuaNetwork.Engine;
 
+/// <summary>The kinds of organization (node) in the Kahua Network.</summary>
 internal enum OrgRole
 {
     Owner,
@@ -12,8 +13,10 @@ internal enum OrgRole
     ProgramManager,
 }
 
+/// <summary>Extension helpers mapping an <see cref="OrgRole"/> to its color, short tag, and display name.</summary>
 internal static class Roles
 {
+    /// <summary>The role's accent/glow color.</summary>
     public static SKColor Color(this OrgRole r) => r switch
     {
         OrgRole.Owner => Theme.Cyan,
@@ -25,6 +28,7 @@ internal static class Roles
         _ => Theme.Cyan,
     };
 
+    /// <summary>The short chip tag (e.g. "GC", "SUB").</summary>
     public static string Tag(this OrgRole r) => r switch
     {
         OrgRole.Owner => "OWNER",
@@ -36,6 +40,7 @@ internal static class Roles
         _ => "?",
     };
 
+    /// <summary>The full human-readable role name.</summary>
     public static string Display(this OrgRole r) => r switch
     {
         OrgRole.Owner => "Owner",
@@ -48,6 +53,7 @@ internal static class Roles
     };
 }
 
+/// <summary>The document types that flow between organizations as data streams.</summary>
 internal enum DocumentKind
 {
     RFI,
@@ -59,8 +65,10 @@ internal enum DocumentKind
     Drawing,
 }
 
+/// <summary>Extension helpers mapping a <see cref="DocumentKind"/> to its glow color and label.</summary>
 internal static class Documents
 {
+    /// <summary>The exchange's glow/pulse color.</summary>
     public static SKColor Color(this DocumentKind k) => k switch
     {
         DocumentKind.RFI => Theme.Cyan,
@@ -73,6 +81,7 @@ internal static class Documents
         _ => Theme.Cyan,
     };
 
+    /// <summary>The uppercase label shown on the stream/HUD (e.g. "PAY APP").</summary>
     public static string ShortLabel(this DocumentKind k) => k switch
     {
         DocumentKind.RFI => "RFI",

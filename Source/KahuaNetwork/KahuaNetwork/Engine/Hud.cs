@@ -5,6 +5,11 @@ using SkiaSharp;
 
 namespace KahuaNetwork.Engine;
 
+/// <summary>
+/// The glassmorphism overlay: title, network stats panel, the rotating activity
+/// feed, the per-org inspector panel (with sparkline), the action buttons, and
+/// corner brackets. Also owns button hit-testing for pointer input.
+/// </summary>
 internal sealed class Hud
 {
     public SceneRenderer Scene { get; }
@@ -393,8 +398,10 @@ internal sealed class Hud
     }
 }
 
+/// <summary>The action a HUD button triggers when clicked.</summary>
 internal enum HudButtonAction { GlobalView, Regenerate, ToggleGrid, Mitigate }
 
+/// <summary>A single clickable HUD button: its label, screen rect, and action.</summary>
 internal sealed class HudButton
 {
     public string Label { get; }

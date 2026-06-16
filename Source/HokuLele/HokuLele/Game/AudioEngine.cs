@@ -4,15 +4,23 @@ using NAudio.Wave;
 
 namespace HokuLele.Game;
 
-// Procedural sound effects for HokuLele (Galaga-style vector shooter).
-// Plumbing lives in `Arcade.Common.Audio.AudioEngineBase` — static facade.
+/// <summary>
+/// Procedural sound effects for HokuLele, as a static facade. Cross-platform
+/// plumbing (NAudio mixer on desktop, JS interop on WASM) lives in
+/// <see cref="AudioEngineBase"/>; this type defines the voices and forwards calls.
+/// </summary>
 public static class AudioEngine
 {
     static readonly AudioEngineImpl _impl = new();
+    /// <summary>Starts the audio device (desktop). No-op elsewhere.</summary>
     public static void Init()         => _impl.Init();
+    /// <summary>Stops and disposes the audio device.</summary>
     public static void Shutdown()     => _impl.Shutdown();
+    /// <summary>Player shot blip.</summary>
     public static void PlayShoot()    => _impl.PlayShoot();
+    /// <summary>Explosion noise burst (enemy or player death).</summary>
     public static void PlayExplosion() => _impl.PlayExplosion();
+    /// <summary>Dive/beam-approach whoosh.</summary>
     public static void PlayDive()     => _impl.PlayDive();
 
     sealed class AudioEngineImpl : AudioEngineBase

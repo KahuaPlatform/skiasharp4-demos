@@ -3,9 +3,12 @@ using System.Collections.Generic;
 
 namespace Heiau.Game;
 
-// Star-Castle-style vector game: orbit the rotating energy rings, shoot through
-// gaps, kill the central turret. World is a 900×900 square; the action centres
-// on (450, 450). Player has Asteroids-style inertia + screen wrap.
+/// <summary>
+/// The per-frame brain for Heiau, a Star-Castle ring shooter (900×900 square,
+/// action centered on the turret). Runs ship inertia + screen wrap, ring rotation,
+/// turret aim/fire, bullet-vs-segment collisions, Spark mines, scoring, per-level
+/// ring rebuilds, the mode state machine, and the attract autopilot.
+/// </summary>
 public sealed class GameWorld
 {
     // --- World ---
@@ -71,6 +74,7 @@ public sealed class GameWorld
         BuildLevel(1);
     }
 
+    /// <summary>No-op: world coords are fixed and the renderer letterboxes.</summary>
     public void Resize(float w, float h) { /* fixed world coords */ }
 
     void BuildLevel(int level)
@@ -94,6 +98,7 @@ public sealed class GameWorld
         };
     }
 
+    /// <summary>Starts a fresh player-controlled game at level 1.</summary>
     public void StartGame()
     {
         Mode = GameMode.Playing;
@@ -108,6 +113,7 @@ public sealed class GameWorld
         ShowPlacard($"LEVEL {Level}", 1.6f);
     }
 
+    /// <summary>Starts the self-playing attract demo (autopilot, near-infinite lives).</summary>
     public void StartAttract()
     {
         StartGame();
@@ -115,6 +121,7 @@ public sealed class GameWorld
         LivesLeft = 9999;
     }
 
+    /// <summary>Returns to the title screen and clears the playfield.</summary>
     public void ReturnToTitle()
     {
         Mode = GameMode.Title;
@@ -125,6 +132,7 @@ public sealed class GameWorld
         Popups.Clear();
     }
 
+    /// <summary>Shows a centered placard (e.g. "LEVEL 2") for <paramref name="seconds"/>.</summary>
     public void ShowPlacard(string text, float seconds)
     {
         PlacardText = text;
@@ -133,6 +141,7 @@ public sealed class GameWorld
 
     // --- Per-frame tick ---
 
+    /// <summary>Advances the game one frame; dispatches on <see cref="Mode"/>.</summary>
     public void Update(float dt)
     {
         if (PlacardTimer > 0) PlacardTimer -= dt;

@@ -2,12 +2,14 @@ using System;
 
 namespace Mahina.Game;
 
+/// <summary>Top-level game state for Mahina's Lunar-Lander gameplay.</summary>
 public enum GameMode { Title, Playing, Landed, Crashed, GameOver, Attract }
 
-// Lunar Module — the player's ship.
-//   Position / Velocity are in world coordinates (1280×720 landscape).
-//   AngleRadians is rotation from "vertical / straight up". 0 = nose straight up.
-//   FuelKg is the remaining propellant mass; thrust impulse depletes it linearly.
+/// <summary>
+/// The player's lunar module. Position/velocity are world coords (1280×720);
+/// <see cref="AngleRadians"/> is rotation from straight-up (0 = nose up, +CW);
+/// <see cref="FuelKg"/> is propellant that thrust depletes linearly.
+/// </summary>
 public sealed class Lander
 {
     public Vec2  Position;
@@ -19,9 +21,10 @@ public sealed class Lander
     public bool  Alive = true;
 }
 
-// Landing pads — flat segments of terrain at a specific X range with a score multiplier.
-//   Multiplier 5 = narrow ("expert"), 3 = medium, 2 = wide ("safe").
-//   Drawn brighter than surrounding terrain and labeled with the multiplier.
+/// <summary>
+/// A flat terrain segment you can land on, with a score multiplier (5 = narrow
+/// "expert", 3 = medium, 2 = wide "safe"). Drawn brighter than terrain and labeled.
+/// </summary>
 public sealed class LandingPad
 {
     public float X0;       // left edge
@@ -30,15 +33,17 @@ public sealed class LandingPad
     public int   Multiplier;
 }
 
-// Terrain — a polyline along the bottom of the world. Pads are flat segments
-// embedded in this line; everything else is jagged hills/valleys.
+/// <summary>
+/// The lunar surface: a polyline along the world bottom with <see cref="Pads"/>
+/// embedded as flat segments; everything else is jagged hills/valleys.
+/// </summary>
 public sealed class Terrain
 {
     public Vec2[] Points = Array.Empty<Vec2>();
     public LandingPad[] Pads = Array.Empty<LandingPad>();
 }
 
-// Particles for thrust flame + crash explosion.
+/// <summary>A short-lived thrust-flame / crash-explosion particle (purely visual).</summary>
 public sealed class Particle
 {
     public Vec2  Pos;
@@ -49,6 +54,7 @@ public sealed class Particle
     public float Size = 2.0f;
 }
 
+/// <summary>A floating "+score" number shown briefly after a landing.</summary>
 public sealed class ScorePopup
 {
     public Vec2  Pos;

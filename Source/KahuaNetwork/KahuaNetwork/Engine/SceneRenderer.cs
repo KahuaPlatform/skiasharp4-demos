@@ -6,6 +6,12 @@ using SkiaSharp;
 
 namespace KahuaNetwork.Engine;
 
+/// <summary>
+/// Composes the whole frame: sky + aurora, the animated ground grid, the
+/// depth-sorted towers (with halos, faces, window lights, edges, caps, tags), the
+/// data streams, particles, Global-View overlays, and the scanline/vignette
+/// post-pass. The HUD is drawn separately on top by <see cref="Hud"/>.
+/// </summary>
 internal sealed class SceneRenderer
 {
     public City City { get; }

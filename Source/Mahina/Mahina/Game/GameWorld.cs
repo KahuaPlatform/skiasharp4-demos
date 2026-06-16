@@ -3,11 +3,13 @@ using System.Collections.Generic;
 
 namespace Mahina.Game;
 
-// Lunar-Lander-style physics game. Landscape 1280×720 world. The player flies a
-// vector lunar module under constant gravity, rotating with A/D (or arrows) and
-// firing the main thruster with W/Up/Space to brake their descent. Touch down
-// gently on a flat pad to score (multiplier based on pad width); crash into
-// anything else and lose a life.
+/// <summary>
+/// The per-frame brain for Mahina, a Lunar-Lander physics game (landscape
+/// 1280×720). Integrates gravity + thrust + rotation, burns fuel, runs terrain
+/// collision and the landing/crash judgement, scoring, per-level terrain
+/// regeneration, the mode state machine, and the attract autopilot. Touch down
+/// gently on a flat pad to score; crash into anything else and lose a life.
+/// </summary>
 public sealed class GameWorld
 {
     // --- World dimensions ---
@@ -65,6 +67,7 @@ public sealed class GameWorld
         ResetLanderToSpawn();
     }
 
+    /// <summary>No-op: world coords are fixed and the renderer letterboxes.</summary>
     public void Resize(float w, float h)
     {
         // Fixed world coords; nothing to do.
@@ -72,6 +75,7 @@ public sealed class GameWorld
 
     // --- Lifecycle ---
 
+    /// <summary>Starts a fresh player-controlled game at level 1.</summary>
     public void StartGame()
     {
         Mode = GameMode.Playing;
@@ -85,6 +89,7 @@ public sealed class GameWorld
         ShowPlacard($"LEVEL {Level}", 1.6f);
     }
 
+    /// <summary>Starts the self-playing attract demo (homing autopilot, near-infinite lives).</summary>
     public void StartAttract()
     {
         StartGame();
@@ -92,6 +97,7 @@ public sealed class GameWorld
         LivesLeft = 9999;
     }
 
+    /// <summary>Returns to the title screen and clears transient effects.</summary>
     public void ReturnToTitle()
     {
         Mode = GameMode.Title;
@@ -130,6 +136,7 @@ public sealed class GameWorld
         ShowPlacard("TRY AGAIN", 1.2f);
     }
 
+    /// <summary>Shows a centered placard (e.g. "LEVEL 2") for <paramref name="seconds"/>.</summary>
     public void ShowPlacard(string text, float seconds)
     {
         PlacardText = text;
@@ -138,6 +145,7 @@ public sealed class GameWorld
 
     // --- Per-frame tick ---
 
+    /// <summary>Advances the game one frame; dispatches on <see cref="Mode"/>.</summary>
     public void Update(float dt)
     {
         if (PlacardTimer > 0) PlacardTimer -= dt;

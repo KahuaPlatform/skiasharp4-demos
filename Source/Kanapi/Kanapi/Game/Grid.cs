@@ -3,13 +3,18 @@ using System.Collections.Generic;
 
 namespace Kanapi.Game;
 
-// Mushroom field on a fixed-size grid. Centipede navigates the grid; the player
-// roams freely in the bottom rows. Mushrooms have 4 HP and shed visible petals
-// per hit; on full destruction they vanish and award the player 1 point.
+/// <summary>
+/// The 30×30 mushroom field. The centipede navigates these cells and the player
+/// roams the bottom rows; mushrooms have 4 HP, shed petals per hit, and award 1
+/// point when destroyed. Also provides the cell↔world helpers used throughout.
+/// </summary>
 public sealed class MushroomGrid
 {
+    /// <summary>Grid columns.</summary>
     public const int  Cols     = 30;
+    /// <summary>Grid rows.</summary>
     public const int  Rows     = 30;
+    /// <summary>Cell edge length in world units.</summary>
     public const float CellSize = 24f;
 
     // PlayerZoneTopRow defines where the player's movable area starts. Rows
@@ -21,12 +26,14 @@ public sealed class MushroomGrid
     // Total alive mushrooms — used by Flea spawn logic in future expansions.
     public int Count { get; private set; }
 
+    /// <summary>Returns the mushroom at (col,row), or null if empty/out of bounds.</summary>
     public Mushroom? Get(int col, int row)
     {
         if (col < 0 || col >= Cols || row < 0 || row >= Rows) return null;
         return _cells[col, row];
     }
 
+    /// <summary>Places a mushroom (updating the alive count); ignores out-of-bounds.</summary>
     public void Set(Mushroom m)
     {
         if (!InBounds(m.Col, m.Row)) return;
@@ -34,6 +41,7 @@ public sealed class MushroomGrid
         _cells[m.Col, m.Row] = m;
     }
 
+    /// <summary>Removes the mushroom at (col,row); returns true if one was there.</summary>
     public bool Remove(int col, int row)
     {
         if (!InBounds(col, row)) return false;
@@ -43,13 +51,15 @@ public sealed class MushroomGrid
         return true;
     }
 
+    /// <summary>True if (col,row) is inside the grid.</summary>
     public static bool InBounds(int col, int row) =>
         col >= 0 && col < Cols && row >= 0 && row < Rows;
 
+    /// <summary>World-space center of cell (col,row).</summary>
     public static Vec2 CellCenter(int col, int row) =>
         new(col * CellSize + CellSize * 0.5f, row * CellSize + CellSize * 0.5f);
 
-    // World point -> (col, row). Clamped to grid bounds.
+    /// <summary>Maps a world point to (col,row), clamped to grid bounds.</summary>
     public static (int col, int row) WorldToCell(Vec2 p)
     {
         int c = Math.Clamp((int)MathF.Floor(p.X / CellSize), 0, Cols - 1);
@@ -57,6 +67,7 @@ public sealed class MushroomGrid
         return (c, r);
     }
 
+    /// <summary>Enumerates every live mushroom (row-major).</summary>
     public IEnumerable<Mushroom> AllMushrooms()
     {
         for (int r = 0; r < Rows; r++)
@@ -64,8 +75,11 @@ public sealed class MushroomGrid
                 if (_cells[c, r] != null) yield return _cells[c, r]!;
     }
 
-    // Generate a randomized starting field. Sparser at the bottom (so the player
-    // has clear lines of sight).
+    /// <summary>
+    /// Clears and regenerates a randomized field for <paramref name="level"/>:
+    /// denser near the top, sparser toward the player so lines of sight stay open,
+    /// with a small per-level density bump.
+    /// </summary>
     public void Reset(int level, Random rng)
     {
         for (int r = 0; r < Rows; r++)

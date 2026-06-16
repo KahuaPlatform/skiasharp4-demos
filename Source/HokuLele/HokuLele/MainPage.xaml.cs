@@ -8,6 +8,11 @@ using Windows.System;
 
 namespace HokuLele;
 
+/// <summary>
+/// Hosts the playfield and drives HokuLele's game loop on
+/// <c>CompositionTarget.Rendering</c> (vsync-aligned). Translates raw key/pointer
+/// events into the world's movement/fire flags and mode transitions.
+/// </summary>
 public sealed partial class MainPage : Page
 {
     readonly GameWorld _world = new();
@@ -16,6 +21,8 @@ public sealed partial class MainPage : Page
     bool _rendering;
 
     bool _left, _right, _fire;
+    // Latched "fire was pressed this frame" so a single tap fires once even if the
+    // key-repeat pump hasn't kicked in; cleared every frame after it's consumed.
     bool _firePressedThisFrame;
 
     public MainPage()
@@ -52,6 +59,9 @@ public sealed partial class MainPage : Page
         }
     }
 
+    // One compositor frame: compute dt (clamped to [1/60, 1/30] so a stall can't
+    // destabilize the simulation), push input into the world while Playing, step
+    // it, and invalidate both the playfield and the drifting background.
     void OnRendering(object? sender, object e)
     {
         var now = _clock.Elapsed;

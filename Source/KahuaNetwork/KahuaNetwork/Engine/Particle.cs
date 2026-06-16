@@ -3,6 +3,11 @@ using SkiaSharp;
 
 namespace KahuaNetwork.Engine;
 
+/// <summary>
+/// One additive-blended particle. A value type so the system can hold large pools
+/// in flat arrays with no GC churn. <see cref="Target"/> drives choreographed flows
+/// (e.g. the topology-graph reassembly).
+/// </summary>
 internal struct Particle
 {
     public Vector3 Position;
@@ -16,9 +21,11 @@ internal struct Particle
     public float Drag;
     public Vector3 Gravity;
 
+    /// <summary>Remaining life as a 0..1 fraction (drives fade/size).</summary>
     public readonly float LifeFrac => Life / MaxLife;
 }
 
+/// <summary>The behavioral flavors of particle the emitter produces.</summary>
 internal enum ParticleKind
 {
     Spark,        // ambient drift

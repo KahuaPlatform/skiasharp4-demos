@@ -10,6 +10,12 @@ using Windows.System;
 
 namespace KahuaNetwork;
 
+/// <summary>
+/// Hosts the <see cref="SceneCanvas"/> and drives the demo's frame loop on
+/// <c>CompositionTarget.Rendering</c>: advances the scene + HUD each frame and
+/// routes pointer/key input (tower selection, Global View, auto-route, regenerate,
+/// grid toggle) into the engine.
+/// </summary>
 public sealed partial class MainPage : Page
 {
     private readonly SceneRenderer _scene;
@@ -38,6 +44,8 @@ public sealed partial class MainPage : Page
         CompositionTarget.Rendering -= OnRender;
     }
 
+    // One frame: compute dt (capped at 0.1s so a stall can't lurch the sim),
+    // advance the scene + HUD, then request a repaint.
     private void OnRender(object? sender, object e)
     {
         var now = DateTime.UtcNow;

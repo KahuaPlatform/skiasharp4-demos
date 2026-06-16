@@ -3,8 +3,16 @@ using System.Collections.Generic;
 
 namespace Pohaku.Game;
 
+/// <summary>Top-level game state. <c>Demo</c> is the attract/title screen (invincible idle ship).</summary>
 public enum GameMode { Demo, Playing, GameOver }
 
+/// <summary>
+/// The per-frame brain for Pohaku, a vector Asteroids clone. Owns the ship,
+/// asteroids, bullets, saucer and particles; runs physics, wave spawning,
+/// collisions, scoring, the mode state machine, and the V-key vibrant-mode flag.
+/// The <see cref="Renderer"/> reads this state; <c>MainPage</c> feeds input and
+/// calls <see cref="Update"/> once per compositor frame.
+/// </summary>
 public class GameWorld
 {
     public float Width = 1280;
@@ -37,12 +45,14 @@ public class GameWorld
         StartDemo();
     }
 
+    /// <summary>Updates the logical world size from the canvas, with sane minimums.</summary>
     public void Resize(float w, float h)
     {
         Width = MathF.Max(320, w);
         Height = MathF.Max(240, h);
     }
 
+    /// <summary>Resets into attract/demo mode: a fresh wave and an effectively invincible idle ship.</summary>
     public void StartDemo()
     {
         Mode = GameMode.Demo;
@@ -62,6 +72,7 @@ public class GameWorld
         };
     }
 
+    /// <summary>Starts a fresh player-controlled game at level 1 with 3 lives.</summary>
     public void StartGame()
     {
         Mode = GameMode.Playing;
@@ -81,6 +92,8 @@ public class GameWorld
         SpawnAsteroidWave(4);
     }
 
+    // Spawns `count` large asteroids at random positions, retrying until each is
+    // at least 180 units from the ship so the wave never appears on top of you.
     private void SpawnAsteroidWave(int count)
     {
         for (int i = 0; i < count; i++)
@@ -100,6 +113,7 @@ public class GameWorld
         }
     }
 
+    /// <summary>Fires a ship bullet (cooldown- and count-capped); inherits ship velocity.</summary>
     public void FireBullet()
     {
         if (Ship.ShootCooldown > 0) return;
@@ -116,6 +130,10 @@ public class GameWorld
         AudioEngine.PlayShoot();
     }
 
+    /// <summary>
+    /// Teleports the ship to a random spot (zeroing velocity). Classic risk: a
+    /// 1-in-8 "bad hyperspace" kills the ship on arrival.
+    /// </summary>
     public void HyperSpace()
     {
         AudioEngine.PlayHyperspace();
@@ -128,6 +146,7 @@ public class GameWorld
         }
     }
 
+    /// <summary>Advances the game one frame; dispatches on <see cref="Mode"/>.</summary>
     public void Update(float dt)
     {
         _attractTextTimer += dt;

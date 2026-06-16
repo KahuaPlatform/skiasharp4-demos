@@ -5,6 +5,11 @@ using SkiaSharp;
 
 namespace KahuaNetwork.Engine;
 
+/// <summary>
+/// One organization in the network, rendered as a glowing 3D tower. Holds its
+/// role, world placement/size, and the live business metrics (active projects,
+/// approval backlog, throughput, pending items) shown in the inspector panel.
+/// </summary>
 internal sealed class Building
 {
     public string Id { get; init; } = Guid.NewGuid().ToString("N")[..6];

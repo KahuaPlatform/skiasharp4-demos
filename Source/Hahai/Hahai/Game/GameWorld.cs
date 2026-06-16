@@ -3,9 +3,12 @@ using System.Collections.Generic;
 
 namespace Hahai.Game;
 
-// Hahai = "to chase". Pac-Man homage: eat pellets, dodge four ghosts that
-// cycle through Chase/Scatter phases, grab a power pellet to flip the ghosts
-// frightened and devour them for big multipliers.
+/// <summary>
+/// The per-frame brain for Hahai (Pac-Man homage). Runs Pac's turn-at-intersection
+/// motion, the four ghosts' scatter/chase phase scheduling + kind-specific
+/// targeting + frightened/eaten states + ghost-house release, pellet/power-pellet
+/// eating, scoring, lives/levels, the mode state machine, and the attract autopilot.
+/// </summary>
 public sealed class GameWorld
 {
     public float Width  => Arena.WorldW;
@@ -62,6 +65,7 @@ public sealed class GameWorld
         ResetForTitle();
     }
 
+    /// <summary>No-op: world coords are fixed and the renderer letterboxes.</summary>
     public void Resize(float w, float h) { }
 
     void ResetForTitle()
@@ -76,6 +80,7 @@ public sealed class GameWorld
         Pac.Alive = false; // attract mode shows the maze idle
     }
 
+    /// <summary>Starts a fresh player-controlled game at level 1, after a READY! beat.</summary>
     public void StartGame()
     {
         Mode = GameMode.Playing;
@@ -94,12 +99,14 @@ public sealed class GameWorld
         ScatterChaseTimer = ScatterDurations[0];
     }
 
+    /// <summary>Starts the self-playing attract demo (greedy bot pilots the Honu).</summary>
     public void StartAttract()
     {
         StartGame();
         Mode = GameMode.Attract;
     }
 
+    /// <summary>Returns to the title screen and resets the idle maze.</summary>
     public void ReturnToTitle()
     {
         Mode = GameMode.Title;
@@ -145,12 +152,14 @@ public sealed class GameWorld
         };
     }
 
+    /// <summary>Shows a centered placard (e.g. "READY!") for <paramref name="seconds"/>.</summary>
     public void ShowPlacard(string text, float seconds)
     {
         PlacardText = text;
         PlacardTimer = seconds;
     }
 
+    /// <summary>Advances the game one frame; dispatches on <see cref="Mode"/>.</summary>
     public void Update(float dt)
     {
         if (PlacardTimer > 0) PlacardTimer -= dt;

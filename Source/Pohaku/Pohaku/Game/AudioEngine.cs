@@ -4,19 +4,31 @@ using NAudio.Wave;
 
 namespace Pohaku.Game;
 
-// Procedural sound effects for Pohaku (Asteroids-style vector shooter).
-// Plumbing lives in `Arcade.Common.Audio.AudioEngineBase` — static facade.
+/// <summary>
+/// Procedural sound effects for Pohaku, as a static facade. Cross-platform
+/// plumbing (NAudio mixer on desktop, JS interop on WASM) lives in
+/// <see cref="AudioEngineBase"/>; this type defines the voices and forwards calls.
+/// </summary>
 public static class AudioEngine
 {
     static readonly AudioEngineImpl _impl = new();
+    /// <summary>Starts the audio device (desktop). No-op elsewhere.</summary>
     public static void Init()              => _impl.Init();
+    /// <summary>Stops and disposes the audio device.</summary>
     public static void Shutdown()          => _impl.Shutdown();
+    /// <summary>Player shot blip.</summary>
     public static void PlayShoot()         => _impl.PlayShoot();
+    /// <summary>Asteroid/ship explosion noise burst.</summary>
     public static void PlayExplosion()     => _impl.PlayExplosion();
+    /// <summary>Hyperspace teleport warble.</summary>
     public static void PlayHyperspace()    => _impl.PlayHyperspace();
+    /// <summary>Begins the looping thrust rumble.</summary>
     public static void StartThrust()       => _impl.StartThrust();
+    /// <summary>Ends the thrust rumble.</summary>
     public static void StopThrust()        => _impl.StopThrust();
+    /// <summary>Begins the looping saucer warble (large vs small pitch).</summary>
     public static void StartSaucer(bool large) => _impl.StartSaucer(large);
+    /// <summary>Ends the saucer warble.</summary>
     public static void StopSaucer()        => _impl.StopSaucer();
 
     sealed class AudioEngineImpl : AudioEngineBase

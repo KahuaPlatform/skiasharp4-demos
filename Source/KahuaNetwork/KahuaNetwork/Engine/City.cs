@@ -7,6 +7,11 @@ namespace KahuaNetwork.Engine;
 
 // Despite the legacy name, "City" now represents the Kahua Network:
 // a constellation of connected organizations and the documents they exchange.
+/// <summary>
+/// The procedurally-generated network: the set of <see cref="Building"/>
+/// organizations plus the <see cref="DataStream"/> document exchanges wired between
+/// realistic role pairs. Owns regeneration and the per-frame simulation tick.
+/// </summary>
 internal sealed class City
 {
     public List<Building> Buildings { get; } = new();

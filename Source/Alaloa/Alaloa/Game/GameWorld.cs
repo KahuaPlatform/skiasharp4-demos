@@ -3,10 +3,12 @@ using System.Collections.Generic;
 
 namespace Alaloa.Game;
 
-// Tron-Light-Cycles-style game. Four cycles spawn from the four cardinal edges
-// of a 720×720 arena and head toward the centre, laying neon trails. Cycles
-// can only turn 90°; crashing into any trail (your own or anyone else's) or
-// the arena edge kills the cycle. Last cycle alive wins the round.
+/// <summary>
+/// The per-frame brain for Alaloa, a Tron light-cycle duel (720×720). Runs cycle
+/// motion + queued 90° turns, per-cell trail marking and collision, the 30-cell
+/// look-ahead bot AI for the three non-player cycles, round/match scoring, the
+/// mode state machine, and the attract autopilot. Last cycle alive wins the round.
+/// </summary>
 public sealed class GameWorld
 {
     public float Width  => Arena.WorldW;
@@ -50,6 +52,7 @@ public sealed class GameWorld
         ResetForTitle();
     }
 
+    /// <summary>No-op: world coords are fixed and the renderer letterboxes.</summary>
     public void Resize(float w, float h) { }
 
     void ResetForTitle()
@@ -59,6 +62,7 @@ public sealed class GameWorld
         Particles.Clear();
     }
 
+    /// <summary>Starts a fresh match (scores zeroed) at round 1 with the player controlling cycle 0.</summary>
     public void StartGame()
     {
         Mode = GameMode.Playing;
@@ -68,12 +72,14 @@ public sealed class GameWorld
         ShowPlacard("ROUND 1", 1.2f);
     }
 
+    /// <summary>Starts the self-playing attract demo (all four cycles are bots).</summary>
     public void StartAttract()
     {
         StartGame();
         Mode = GameMode.Attract;
     }
 
+    /// <summary>Returns to the title screen and respawns the idle bot demo.</summary>
     public void ReturnToTitle()
     {
         Mode = GameMode.Title;
@@ -129,12 +135,14 @@ public sealed class GameWorld
         }
     }
 
+    /// <summary>Shows a centered placard (e.g. "ROUND 2") for <paramref name="seconds"/>.</summary>
     public void ShowPlacard(string text, float seconds)
     {
         PlacardText = text;
         PlacardTimer = seconds;
     }
 
+    /// <summary>Advances the game one frame; dispatches on <see cref="Mode"/>.</summary>
     public void Update(float dt)
     {
         if (PlacardTimer > 0) PlacardTimer -= dt;
