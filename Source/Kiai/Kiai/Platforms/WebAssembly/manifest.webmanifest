@@ -1,0 +1,10 @@
+{
+  "background_color": "#ffffff",
+  "description": "Kiai",
+  "display": "standalone",
+  "name": "Kiai",
+  "short_name": "Kiai",
+  "start_url": "/index.html",
+  "theme_color": "#ffffff",
+  "scope": "/"
+}
