@@ -52,8 +52,10 @@ Or directly: `dotnet run --project Source/Lua/Lua/Lua.csproj -f net10.0-desktop`
 | [`Renderer.cs`](../../Source/Lua/Lua/Game/Renderer.cs) | Neon paint chassis (carried over from Pohaku/HokuLele) + Tempest-specific draws (well, claw, enemies, spikes, warp). |
 | [`AudioEngine.cs`](../../Source/Lua/Lua/Game/AudioEngine.cs) | Procedural NAudio synth voices (desktop) + JS interop bridge (WASM). |
 | [`Platforms/WebAssembly/WasmScripts/audio.js`](../../Source/Lua/Lua/Platforms/WebAssembly/WasmScripts/audio.js) | Web Audio voices mirroring the NAudio ones. |
-| [`HighScoreStore.cs`](../../Source/Lua/Lua/Game/HighScoreStore.cs) | Tiny file-backed high score persistence. |
+| [`BackgroundSurface.cs`](../../Source/Lua/Lua/BackgroundSurface.cs) | Thin wrapper over `Arcade.Common.AmbientStarBackdrop`. |
 | [`MainPage.xaml.cs`](../../Source/Lua/Lua/MainPage.xaml.cs) | Input + render loop. |
+
+High-score persistence is shared chassis ([`Source/Common/HighScoreStore.cs`](../../Source/Common/HighScoreStore.cs)), source-included via the csproj `<Compile>` glob — there is no per-game copy.
 
 The world coordinates are fixed at `720 × 1280` (portrait 9:16); the renderer letterboxes onto whatever canvas size it gets. The desktop window is sized to `810 × 1440` in [`App.xaml.cs`](../../Source/Lua/Lua/App.xaml.cs).
 

@@ -66,8 +66,11 @@ publish/site/
     ├── heiau/
     ├── kanapi/
     ├── alaloa/
-    └── hahai/
+    ├── hahai/
+    └── paku/
 ```
+
+(One `games/<slug>/` subfolder per [`GameCatalog.cs`](../../Source/Launcher/Launcher/Game/GameCatalog.cs) entry; the set grows as games are added.)
 
 Serve `publish/site/` from any static host and the launcher's tile clicks navigate to `/games/<slug>/`.
 

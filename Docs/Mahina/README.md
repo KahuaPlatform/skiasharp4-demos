@@ -46,11 +46,10 @@ Or directly: `dotnet run --project Source/Mahina/Mahina/Mahina.csproj -f net10.0
 | [`Renderer.cs`](../../Source/Mahina/Mahina/Game/Renderer.cs) | All draws: terrain polyline, pads with multipliers, vector lander, thrust flame, particles, HUD (score / fuel gauge / VX-VY readouts / altitude / lives). |
 | [`AudioEngine.cs`](../../Source/Mahina/Mahina/Game/AudioEngine.cs) | Procedural NAudio voices + WASM JS bridge. Thrust loop, landing chime, explosion. |
 | [`Platforms/WebAssembly/WasmScripts/audio.js`](../../Source/Mahina/Mahina/Platforms/WebAssembly/WasmScripts/audio.js) | Web Audio mirror — gesture-gated AudioContext, same voice set. |
-| [`HighScoreStore.cs`](../../Source/Mahina/Mahina/Game/HighScoreStore.cs) | File-backed high-score persistence. |
 | [`BackgroundSurface.cs`](../../Source/Mahina/Mahina/BackgroundSurface.cs) | Ambient deep-space backdrop behind the playfield Viewbox. |
 | [`MainPage.xaml`](../../Source/Mahina/Mahina/MainPage.xaml) / [`.cs`](../../Source/Mahina/Mahina/MainPage.xaml.cs) | Viewbox layout + input + render loop. |
 
-World coordinates are fixed at `1280 × 720` landscape. Renderer letterboxes; Viewbox preserves the 16:9 ratio at any window size.
+World coordinates are fixed at `1280 × 720` landscape. Renderer letterboxes; Viewbox preserves the 16:9 ratio at any window size. High-score persistence is shared chassis ([`Source/Common/HighScoreStore.cs`](../../Source/Common/HighScoreStore.cs)), source-included via the csproj `<Compile>` glob.
 
 ## Stack
 

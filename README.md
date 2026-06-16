@@ -16,6 +16,9 @@ A consolidated home for several [Uno Platform](https://platform.uno) + [SkiaShar
 | [Kanapi](Docs/Kanapi/README.md) | net10.0 (wasm / desktop) | Centipede-style vector shooter — 30×30 mushroom grid, centipede chain that snakes + bounces + splits on body hits, zigzagging spiders that eat mushrooms, 4-direction player blaster with auto-fire, attract mode. | Working |
 | [Alaloa](Docs/Alaloa/README.md) | net10.0 (wasm / desktop) | Tron-Light-Cycles-style duel — 4 cycles spawn from cardinal edges, continuous motion with 90° turns, per-cell trail-vs-anything collision, look-ahead bot AI, best-of-5 match scoring. | Working |
 | [Hahai](Docs/Hahai/README.md) | net10.0 (wasm / desktop) | Pac-Man-style chase — Honu (sea turtle) eats limu pellets and lehua power flowers while four colored Mo'o (water-spirit lizards) pursue, with classic scatter/chase phases and eyes-return-to-house on devour. | Working |
+| [Paku](Docs/Paku/README.md) | net10.0 (wasm / desktop) | Agar.io-style cell-absorption arena with plasma background, mass-ejection thrust, progressive AI hunters, zooming camera. | Working |
+| [Kiai](Docs/Kiai/DESIGN.md) | net10.0 (wasm / desktop) | Defender-style horizontally-wrapping shooter — patrol a toroidal world, gun down landers before they abduct humanoids, catch falling humanoids, ship-centred radar strip, smart bombs + hyperspace, attract mode. | Working |
+| [Koa](Docs/Koa/DESIGN.md) | net10.0 (wasm / desktop) | Gauntlet-style top-down dungeon crawl — 8-way wall-sliding movement, destructible generators spawning hordes, flow-field swarm AI, draining-health clock, food / potions / treasure, multi-level progression, attract mode. | Working |
 | [Launcher](Docs/Launcher/README.md) | net10.0 (wasm / desktop) | Unified neon catalog landing page — card grid of every demo with hover effects + click-to-navigate. Designed for a published static site where each game sits at `/games/<name>/`. | Working |
 | [Uno3dViewer](Source/Uno3dViewer/) | net10.0 (desktop only) | OpenGL 3D model viewer using Silk.NET + Assimp, rendered into Uno's `GLCanvasElement`. | Working |
 
@@ -41,6 +44,9 @@ UnoSkiaDemos/
 │   ├── Kanapi/
 │   ├── Alaloa/
 │   ├── Hahai/
+│   ├── Paku/
+│   ├── Kiai/
+│   ├── Koa/
 │   ├── Launcher/
 │   └── Uno3dViewer/
 ├── Docs/                    Per-demo READMEs, design docs, screenshots
@@ -129,8 +135,39 @@ The fastest way is to copy an existing demo as a starting point (Pohaku if you w
 The demos deliberately use different versions and feature sets — that's the point of the repo. Don't try to unify SkiaSharp versions or Uno features across them.
 
 - UnoGallery uses a `$(SkiaSharpVersion)`-gated build (defaults to SkiaSharp 3.119.4 stable; pass `-p:SkiaSharpVersion=4.147.0-preview.3.1` to test the v4 preview)
-- Pohaku, HokuLele, Lua, Mahina, Heiau, Kanapi, Alaloa, Hahai, and Launcher pin SkiaSharp 4.147.0-preview.3.1
-- KahuaNetwork uses SkiaSharp 3.119.4 + `Uno.WinUI.Graphics2DSK`
+- Pohaku, HokuLele, Lua, Mahina, Heiau, Kanapi, Alaloa, Hahai, Paku, Kiai, Koa, and Launcher pin SkiaSharp 4.147.0-preview.3.1
+- KahuaNetwork uses SkiaSharp 3.119.4 + `Uno.WinUI.Graphics2DSK` — and is **deliberately** held there; moving it to SkiaSharp 4 breaks the WebAssembly target at runtime (see [KahuaNetwork & SkiaSharp 4](#kahuanetwork--skiasharp-4) below)
 - Uno3dViewer adds Silk.NET (OpenGL + Assimp) and uses `<UnoFeatures>...GLCanvas</UnoFeatures>`
 
-All twelve share `Uno.Sdk 6.7.0-dev.64` as the MSBuild SDK. Eight of them (HokuLele, Lua, Mahina, Heiau, Kanapi, Alaloa, Hahai, Launcher) share a neon-game chassis from `Source/Common/` (see [Source/Common](Source/Common/)).
+All fifteen share `Uno.Sdk 6.7.0-dev.64` as the MSBuild SDK. Eleven of them (HokuLele, Lua, Mahina, Heiau, Kanapi, Alaloa, Hahai, Paku, Kiai, Koa, Launcher) share a neon-game chassis from `Source/Common/` (see [Source/Common](Source/Common/)).
+
+## KahuaNetwork & SkiaSharp 4
+
+KahuaNetwork is the one game-like demo deliberately held on **SkiaSharp 3.119.4** while the arcade family + Launcher run **SkiaSharp 4.147.0-preview.3.1**. The pin is not arbitrary: upgrading KahuaNetwork to SkiaSharp 4 builds cleanly but **crashes the WebAssembly target at runtime**.
+
+### What we observed
+
+Reproduced 2026-06-16 by bumping `Source/KahuaNetwork/Directory.Packages.props` from SkiaSharp `3.119.4` → `4.147.0-preview.3.1` (both `SkiaSharp` and `SkiaSharp.Views.Uno.WinUI`), leaving `Uno.WinUI.Graphics2DSK 6.7.0-dev.215` in place:
+
+| Target | Build | Runtime |
+|---|---|---|
+| `net10.0-desktop` | ✅ compiles | ✅ runs and renders the full holographic city |
+| `net10.0-browserwasm` | ✅ compiles, and the wasm native pack (`skiasharp.nativeassets.webassembly 4.147.0-preview.3.1`) links | ❌ **traps during boot** |
+
+On WebAssembly the app never advances past the Uno splash screen. The browser console raises a WebAssembly trap:
+
+```
+RuntimeError: function signature mismatch
+```
+
+No `SKCanvasElement` is ever created (`document.querySelectorAll('canvas')` is empty), the boot progress bar stalls, and nothing renders. The desktop target, on the identical code and package set, runs and draws normally.
+
+### Why it only breaks on WASM
+
+`function signature mismatch` is a WebAssembly `call_indirect` trap — an indirect call is made through the function table with a type signature that doesn't match the table slot. The mismatch comes from the SkiaSharp-3-era canvas packages KahuaNetwork carries over from its `ProjectNebula` origin (`Uno.WinUI.Graphics2DSK 6.7.0-dev.215` / `SkiaSharp.Views.Uno.WinUI`) being paired with SkiaSharp 4's native build. The desktop native loader resolves the P/Invoke boundary loosely enough to tolerate the skew; WebAssembly's strictly-typed function tables do not — a mismatched indirect call is an immediate hard trap, so the failure is wasm-only.
+
+The arcade demos avoid this because they consume SkiaSharp 4 directly via `<SkiaSharpVersion>` + the `SkiaRenderer` UnoFeature and take their `SKCanvasElement` from the SDK-supplied `Uno.WinUI.Graphics2DSK` that matches SkiaSharp 4 — they do not pin the older `SkiaSharp.Views.Uno.WinUI` package.
+
+### Resolution
+
+Keep KahuaNetwork on SkiaSharp 3.119.4. Per-demo SkiaSharp pins are an explicit design choice — each demo compiles its own chassis copy under its own version, so a mixed-version repo costs nothing (see [Docs/Architecture/03-Shared-Chassis.md](Docs/Architecture/03-Shared-Chassis.md)). Revisit only once a `Uno.WinUI.Graphics2DSK` / `SkiaSharp.Views.Uno.WinUI` build aligned to SkiaSharp 4 is available.

@@ -46,11 +46,10 @@ Or directly: `dotnet run --project Source/Heiau/Heiau/Heiau.csproj -f net10.0-de
 | [`Renderer.cs`](../../Source/Heiau/Heiau/Game/Renderer.cs) | All draws: rings as arc segments with hue-shifting halos, central pohaku turret with rotating barrel, vector ship, particles, HUD. |
 | [`AudioEngine.cs`](../../Source/Heiau/Heiau/Game/AudioEngine.cs) | Procedural NAudio voices + WASM JS interop bridge. |
 | [`Platforms/WebAssembly/WasmScripts/audio.js`](../../Source/Heiau/Heiau/Platforms/WebAssembly/WasmScripts/audio.js) | Web Audio mirror — gesture-gated AudioContext, same voice set. |
-| [`HighScoreStore.cs`](../../Source/Heiau/Heiau/Game/HighScoreStore.cs) | File-backed high-score persistence. |
 | [`BackgroundSurface.cs`](../../Source/Heiau/Heiau/BackgroundSurface.cs) | Ambient deep-space backdrop behind the playfield Viewbox. |
 | [`MainPage.xaml`](../../Source/Heiau/Heiau/MainPage.xaml) / [`.cs`](../../Source/Heiau/Heiau/MainPage.xaml.cs) | Square Viewbox layout + input + render loop. |
 
-World coordinates are fixed at `900 × 900` square. Renderer letterboxes; Viewbox preserves the 1:1 ratio at any window size.
+World coordinates are fixed at `900 × 900` square. Renderer letterboxes; Viewbox preserves the 1:1 ratio at any window size. High-score persistence is shared chassis ([`Source/Common/HighScoreStore.cs`](../../Source/Common/HighScoreStore.cs)), source-included via the csproj `<Compile>` glob.
 
 ## Stack
 
