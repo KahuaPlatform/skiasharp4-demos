@@ -3,25 +3,41 @@ using SkiaSharp;
 
 namespace Arcade.Common.Chassis;
 
-// Hand-coded vector glyph font used by the title screens and scrolling marquee.
-// Each character is a short list of line-segment pairs (x1,y1,x2,y2,...) sized
-// to fit a CharWidth × CharHeight box. The retro 5x7-ish look is intentional.
-//
-// Only the characters actually used by the games are included; missing chars
-// just don't render. Add new ones by extending the dictionary below.
+/// <summary>
+/// Hand-coded stroke-vector font used by the title screens and scrolling marquee
+/// (NOT for SKFont text like the score — that goes through <c>HudText</c>). Each
+/// character is a list of line-segment endpoints baked into an <see cref="SKPath"/>
+/// fitted to a <see cref="CharWidth"/> × <see cref="CharHeight"/> box; the retro
+/// 5×7-ish look is intentional.
+/// </summary>
+/// <remarks>
+/// Only characters actually used by the games are defined; any missing char just
+/// renders as a gap. Currently: A–N (no J), O–W (no Q, X), Y, the digit 4, plus
+/// <c>·</c>, <c>-</c>, <c>+</c>, <c>'</c>. Extend by adding entries to the
+/// dictionary in <c>Build</c>.
+/// </remarks>
 public static class GlyphFont
 {
+    /// <summary>Nominal glyph cell width, in world units.</summary>
     public const float CharWidth  = 40f;
+    /// <summary>Nominal glyph cell height, in world units.</summary>
     public const float CharHeight = 56f;
+    /// <summary>Horizontal gap between adjacent glyph cells.</summary>
     public const float CharGap    = 12f;
+    /// <summary>Per-character horizontal step (<see cref="CharWidth"/> + <see cref="CharGap"/>).</summary>
     public const float CharAdvance = CharWidth + CharGap;
 
+    /// <summary>Compiled glyph paths, keyed by character. Built once at type init.</summary>
     public static readonly Dictionary<char, SKPath> Glyphs = Build();
 
     static Dictionary<char, SKPath> Build()
     {
+        // Glyphs are authored on a 4-wide × 6-tall integer grid; sx/sy scale that
+        // design grid up to the CharWidth × CharHeight cell.
         float sx = CharWidth  / 4f;
         float sy = CharHeight / 6f;
+        // Turns a flat (x1,y1,x2,y2,...) list of segment endpoints into a path of
+        // disjoint MoveTo/LineTo strokes (these are not deprecated on SKPathBuilder).
         SKPath G(params float[] coords)
         {
             using var b = new SKPathBuilder();

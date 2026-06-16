@@ -5,15 +5,22 @@ using NAudio.Wave.SampleProviders;
 
 namespace Arcade.Common.Audio;
 
-// Shared plumbing for all the demos' procedural audio engines.
-// - Desktop (HAS_NAUDIO): owns a single MixingSampleProvider + WaveOutEvent and
-//   exposes TryPlay() so subclasses can submit their voice ISampleProviders.
-// - WASM (__WASM__): exposes WasmPlay() that calls into JS interop; the
-//   matching Web Audio voices live in each demo's audio.js.
-// - Other TFMs: every public surface is a silent no-op.
-//
-// Each demo declares its own concrete `AudioEngine` static class (or instance)
-// that delegates to this base for setup/teardown and provides per-game voices.
+/// <summary>
+/// Shared cross-platform plumbing for every demo's procedural audio engine.
+/// Subclasses add per-game "voices" (short synthesized sounds) and delegate the
+/// platform mechanics to this base.
+/// </summary>
+/// <remarks>
+/// Three compilation contexts, selected by the consumer's DefineConstants:
+/// <list type="bullet">
+/// <item><b>Desktop (<c>HAS_NAUDIO</c>)</b> — owns one <c>MixingSampleProvider</c>
+///   feeding a <c>WaveOutEvent</c> at 60 ms latency; <see cref="TryPlay"/> mixes
+///   in a voice's <c>ISampleProvider</c>.</item>
+/// <item><b>WASM (<c>__WASM__</c>)</b> — <see cref="WasmPlay"/> fires a JS-interop
+///   call to the matching Web Audio voice in the demo's <c>audio.js</c>.</item>
+/// <item><b>Any other TFM</b> — every member is a silent no-op.</item>
+/// </list>
+/// </remarks>
 public abstract class AudioEngineBase
 {
 #if HAS_NAUDIO
@@ -23,6 +30,10 @@ public abstract class AudioEngineBase
     bool _initialized;
 #endif
 
+    /// <summary>
+    /// Idempotently starts the desktop audio device + mixer. No-op on WASM/other
+    /// TFMs and silently disabled if no output device is available.
+    /// </summary>
     public void Init()
     {
 #if HAS_NAUDIO
@@ -45,6 +56,10 @@ public abstract class AudioEngineBase
 #endif
     }
 
+    /// <summary>
+    /// Stops and disposes the desktop output device and clears the mixer so a
+    /// later <see cref="Init"/> can restart cleanly. No-op off desktop.
+    /// </summary>
     public void Shutdown()
     {
 #if HAS_NAUDIO
@@ -57,13 +72,21 @@ public abstract class AudioEngineBase
     }
 
 #if HAS_NAUDIO
+    /// <summary>
+    /// Adds a voice's sample provider to the running mixer (desktop only).
+    /// Swallows the rare race where the mixer is being torn down concurrently.
+    /// </summary>
     protected void TryPlay(ISampleProvider provider)
     {
         try { Mixer?.AddMixerInput(provider); } catch { }
     }
 #endif
 
-    // Fire-and-forget JS interop on wasm; no-op on every other TFM.
+    /// <summary>
+    /// Fire-and-forget JS-interop call to a Web Audio voice (WASM only); no-op on
+    /// every other TFM. <paramref name="js"/> is a snippet like
+    /// <c>globalThis.pohakuAudio.fire()</c>.
+    /// </summary>
     protected static void WasmPlay(string js)
     {
 #if __WASM__

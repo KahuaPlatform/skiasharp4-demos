@@ -3,14 +3,24 @@ using SkiaSharp;
 
 namespace Arcade.Common.Chassis;
 
+/// <summary>
+/// HSV→RGB color conversion used everywhere the neon chassis cycles hue over
+/// time (rainbow titles, marquee letters, energy rings, particle bursts, …).
+/// </summary>
 public static class HsvColor
 {
-    // Standard HSV→RGB. Hue in degrees (auto-wrapped), sat + val in [0, 1].
-    // Used everywhere the neon chassis cycles colors over time (titles, marquee
-    // letters, energy rings, fuseballs, etc.).
+    /// <summary>
+    /// Converts an HSV triple to an opaque <see cref="SKColor"/>.
+    /// </summary>
+    /// <param name="hue">Hue in degrees; any value is wrapped into [0, 360).</param>
+    /// <param name="sat">Saturation in [0, 1].</param>
+    /// <param name="val">Value/brightness in [0, 1].</param>
     public static SKColor HsvToRgb(float hue, float sat, float val)
     {
+        // Wrap hue into [0,360) so callers can pass an ever-increasing time*speed.
         hue = ((hue % 360f) + 360f) % 360f;
+        // Standard sextant decomposition: c is chroma, x the second-largest
+        // component, m the achromatic offset added back to every channel.
         float c = val * sat;
         float x = c * (1f - MathF.Abs((hue / 60f) % 2f - 1f));
         float m = val - c;
