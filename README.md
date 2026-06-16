@@ -134,40 +134,32 @@ The fastest way is to copy an existing demo as a starting point (Pohaku if you w
 
 The demos deliberately use different versions and feature sets — that's the point of the repo. Don't try to unify SkiaSharp versions or Uno features across them.
 
-- UnoGallery uses a `$(SkiaSharpVersion)`-gated build (defaults to SkiaSharp 3.119.4 stable; pass `-p:SkiaSharpVersion=4.147.0-preview.3.1` to test the v4 preview)
+- UnoGallery uses a `$(SkiaSharpVersion)`-gated build (defaults to SkiaSharp 3.119.4 stable; pass `-p:SkiaSharpVersion=4.147.0-preview.3.1` to test the v4 preview — but uniforms-bearing SKSL crashes on that preview; see [SkiaSharp 4 limitations](#skiasharp-4-limitations) below)
 - Pohaku, HokuLele, Lua, Mahina, Heiau, Kanapi, Alaloa, Hahai, Paku, Kiai, Koa, and Launcher pin SkiaSharp 4.147.0-preview.3.1
-- KahuaNetwork uses SkiaSharp 3.119.4 + `Uno.WinUI.Graphics2DSK` — and is **deliberately** held there; moving it to SkiaSharp 4 breaks the WebAssembly target at runtime (see [KahuaNetwork & SkiaSharp 4](#kahuanetwork--skiasharp-4) below)
+- KahuaNetwork uses SkiaSharp 3.119.4 + `Uno.WinUI.Graphics2DSK`
 - Uno3dViewer adds Silk.NET (OpenGL + Assimp) and uses `<UnoFeatures>...GLCanvas</UnoFeatures>`
 
 All fifteen share `Uno.Sdk 6.7.0-dev.64` as the MSBuild SDK. Eleven of them (HokuLele, Lua, Mahina, Heiau, Kanapi, Alaloa, Hahai, Paku, Kiai, Koa, Launcher) share a neon-game chassis from `Source/Common/` (see [Source/Common](Source/Common/)).
 
-## KahuaNetwork & SkiaSharp 4
+## SkiaSharp 4 limitations
 
-KahuaNetwork is the one game-like demo deliberately held on **SkiaSharp 3.119.4** while the arcade family + Launcher run **SkiaSharp 4.147.0-preview.3.1**. The pin is not arbitrary: upgrading KahuaNetwork to SkiaSharp 4 builds cleanly but **crashes the WebAssembly target at runtime**.
+Most demos run **SkiaSharp 4.147.0-preview.3.1** (the arcade family + Launcher). **UnoGallery** is the exception that documents *why* SkiaSharp 4 isn't universal yet: its programmable **SKSL runtime-effect** pipeline crashes on the v4 preview, so it defaults to **SkiaSharp 3.119.4** and gates the v4 path behind a build property.
 
-### What we observed
+### The crash
 
-Reproduced 2026-06-16 by bumping `Source/KahuaNetwork/Directory.Packages.props` from SkiaSharp `3.119.4` → `4.147.0-preview.3.1` (both `SkiaSharp` and `SkiaSharp.Views.Uno.WinUI`), leaving `Uno.WinUI.Graphics2DSK 6.7.0-dev.215` in place:
+Any uniforms-bearing SKSL shader — `SKRuntimeShaderBuilder`, or `SKRuntimeEffect.CreateShader(...)` followed by `ToShader(uniforms, children)` — throws an **`AccessViolation` inside native `sk_runtimeeffect_get_uniform_byte_size` on the first frame**. It builds cleanly; it dies at runtime the moment a uniform block is constructed.
 
-| Target | Build | Runtime |
+| SKSL path | v3 (3.119.4) | v4 (4.147.0-preview.3.1) |
 |---|---|---|
-| `net10.0-desktop` | ✅ compiles | ✅ runs and renders the full holographic city |
-| `net10.0-browserwasm` | ✅ compiles, and the wasm native pack (`skiasharp.nativeassets.webassembly 4.147.0-preview.3.1`) links | ❌ **traps during boot** |
+| Uniforms-bearing shader (`ToShader(uniforms, …)`) | ✅ | ❌ AccessViolation |
+| Parameterless color filter (`ToColorFilter()`) | ✅ | ✅ |
 
-On WebAssembly the app never advances past the Uno splash screen. The browser console raises a WebAssembly trap:
+The parameterless `ToColorFilter()` route survives — which is why UnoGallery's tone-grade pass works on both versions while its six uniform-driven SKSL effects (plasma, dissolve, iris, chroma-shift, hover-glow, …) are v3-only.
 
-```
-RuntimeError: function signature mismatch
-```
+### How UnoGallery handles it
 
-No `SKCanvasElement` is ever created (`document.querySelectorAll('canvas')` is empty), the boot progress bar stalls, and nothing renders. The desktop target, on the identical code and package set, runs and draws normally.
+- Defaults to **SkiaSharp 3.119.4 stable**; opt into the preview with `dotnet build -p:SkiaSharpVersion=4.147.0-preview.3.1`.
+- `Directory.Build.props` defines an `SKIA_V4` compile constant when the version starts with `4.`; uniforms-bearing shaders load only when `!SKIA_V4`, and consumers fall back to non-SKSL primitives (the ambient plasma becomes a dual radial gradient, etc.).
+- The v4-only APIs that *would* justify the pin (`SKPathBuilder`, `SKSamplingOptions`, the new `DrawImage` overloads) are already available in SkiaSharp 3.116+, so there's no reason to force the preview yet.
 
-### Why it only breaks on WASM
-
-`function signature mismatch` is a WebAssembly `call_indirect` trap — an indirect call is made through the function table with a type signature that doesn't match the table slot. The mismatch comes from the SkiaSharp-3-era canvas packages KahuaNetwork carries over from its `ProjectNebula` origin (`Uno.WinUI.Graphics2DSK 6.7.0-dev.215` / `SkiaSharp.Views.Uno.WinUI`) being paired with SkiaSharp 4's native build. The desktop native loader resolves the P/Invoke boundary loosely enough to tolerate the skew; WebAssembly's strictly-typed function tables do not — a mismatched indirect call is an immediate hard trap, so the failure is wasm-only.
-
-The arcade demos avoid this because they consume SkiaSharp 4 directly via `<SkiaSharpVersion>` + the `SkiaRenderer` UnoFeature and take their `SKCanvasElement` from the SDK-supplied `Uno.WinUI.Graphics2DSK` that matches SkiaSharp 4 — they do not pin the older `SkiaSharp.Views.Uno.WinUI` package.
-
-### Resolution
-
-Keep KahuaNetwork on SkiaSharp 3.119.4. Per-demo SkiaSharp pins are an explicit design choice — each demo compiles its own chassis copy under its own version, so a mixed-version repo costs nothing (see [Docs/Architecture/03-Shared-Chassis.md](Docs/Architecture/03-Shared-Chassis.md)). Revisit only once a `Uno.WinUI.Graphics2DSK` / `SkiaSharp.Views.Uno.WinUI` build aligned to SkiaSharp 4 is available.
+Full audit: [Docs/UnoGallery/DESIGN.md](Docs/UnoGallery/DESIGN.md) §2.2–2.3.
