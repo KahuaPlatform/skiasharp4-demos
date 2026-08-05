@@ -1,8 +1,9 @@
 # Kia'i — Design (Defender homage)
 
 > **Status: built.** This was the implementation plan; the game now lives at `Source/Kiai/`.
-> Shared chassis additions this game needs live in
-> [08 – Proposed Chassis Extensions](../Architecture/08-Proposed-Chassis-Extensions.md).
+> The shared chassis pieces this game drove (`Camera2D`, `VectorShapes`, `Radar`, `SeamlessTerrain`)
+> are documented in [03 – Shared Chassis](../Architecture/03-Shared-Chassis.md); the design rationale
+> behind them is in [08 – Chassis Extensions](../Architecture/08-Chassis-Extensions.md).
 
 ## Elevator pitch
 

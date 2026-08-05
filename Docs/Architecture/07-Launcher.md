@@ -60,9 +60,9 @@ flowchart TB
     Probe -->|"else bin/Debug/.../<Folder>.exe exists"| Dbg[Process.Start the Debug exe]
     Probe -->|neither| Fall["Process.Start: dotnet run --project &lt;csproj&gt;"]
 
-    R --> Game[Game window opens (~sub-second)]
+    R --> Game["Game window opens (~sub-second)"]
     Dbg --> Game
-    Fall --> Game2[Game window opens after MSBuild rebuild (~seconds)]
+    Fall --> Game2["Game window opens after MSBuild rebuild (~seconds)"]
 ```
 
 ### Desktop dispatch in detail

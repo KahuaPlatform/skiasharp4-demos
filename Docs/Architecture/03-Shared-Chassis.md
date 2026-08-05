@@ -17,10 +17,27 @@ Source/Common/
     ├── NeonDraw.cs                        ← line / stroke / circle helpers
     ├── NeonBackground.cs                  ← deep-space gradient
     ├── PlayfieldBorder.cs                 ← thin neon rectangle around the playfield
-    ├── HudText.cs                         ← text rendering with halo + sharp passes
+    ├── HudText.cs                         ← text (halo + sharp passes) + neon fill Bar
     ├── GlyphFont.cs                       ← hand-drawn vector glyph font (A-Y + - + ' · 4)
-    └── Marquee.cs                         ← perspective-tilted scrolling marquee + rainbow title
+    ├── Marquee.cs                         ← perspective-tilted scrolling marquee + rainbow title
+    ├── VectorShapes.cs                    ← cached polygon paths, jittered blobs, DrawAt
+    ├── Camera2D.cs                        ← scrolling/zooming viewport, per-axis wrap/clamp/free
+    ├── Radar.cs                           ← minimap / scanner-strip projection + blips
+    ├── SeamlessTerrain.cs                 ← periodic (seam-free) 1-D height field
+    ├── TileGrid.cs                        ← generic tile grid + circle-vs-wall slide resolver
+    ├── AsciiMap.cs                        ← validate + parse an authored ASCII level
+    └── FlowField.cs                       ← multi-source BFS distance field + flow directions
 ```
+
+The pieces divide into two tiers:
+
+- **Core neon tier** (`HsvColor` … `Marquee`, plus `Vec2` / `HighScoreStore` / `AmbientStarBackdrop` /
+  `AudioEngineBase`) — the look-and-feel and plumbing every arcade demo shares.
+- **Scrolling-world tier** (`Camera2D`, `VectorShapes`, `Radar`, `SeamlessTerrain`, `TileGrid<T>`,
+  `AsciiMap`, `FlowField`) — added for the games whose world is bigger than the canvas. Every demo
+  before Kia'i scaled one fixed world to fit the viewport; these are the pieces that made a moving
+  viewport possible. See [08 – Chassis Extensions](08-Chassis-Extensions.md) for the design
+  rationale and what was deliberately *not* built.
 
 ## Source-include mechanism
 
@@ -49,7 +66,7 @@ A `Common.csproj` ProjectReference would be more conventional but loses the thin
 | MSBuild SDK pin | Each demo can pin its own `Uno.Sdk` version (`global.json` per demo). | Common.csproj also pins an SDK — version skew breaks builds. |
 | Per-demo isolation | Each demo remains a fully self-contained unit; deleting Source/Common/ only breaks chassis-using demos. | Common.csproj becomes a maintenance dependency every demo must track. |
 
-The downside is no binary reuse — every demo recompiles the chassis. With 8 chassis-using demos at ~1500 lines of chassis code, that's irrelevant for build time.
+The downside is no binary reuse — every demo recompiles the chassis. With 12 chassis-using projects at ~1900 lines of chassis code, that's irrelevant for build time.
 
 ## Chassis component reference
 
@@ -139,7 +156,10 @@ flowchart LR
 
 ### `Chassis/HudText`
 
-`Draw(canvas, text, x, y, align, font, color)` — text rendering with the halo+sharp double-pass. The HUD scoreboards, placards, title text, and game-over panels in every demo go through this helper.
+Two calls:
+
+- `Draw(canvas, text, x, y, align, font, color)` — text rendering with the halo+sharp double-pass. The HUD scoreboards, placards, title text, and game-over panels in every demo go through this helper.
+- `Bar(canvas, x, y, w, h, fill01, color)` — a neon fill gauge: a dim full-width track, a glowing fill spanning `fill01` (clamped to 0..1) of it, then a crisp frame. Koa drives it from `Hero.Health / MaxHealth` for the continuously-draining "warrior needs food" clock; it exists in the chassis rather than in Koa because fuel (Mahina) and shield (Heiau) gauges are the same widget.
 
 ```mermaid
 sequenceDiagram
@@ -169,45 +189,167 @@ Two static methods:
 
 Both pull glyphs from `GlyphFont` and paint with `NeonPaints.MarqueeHalo` + `MarqueeSharp`.
 
-## Chassis-by-demo usage matrix
+### `Chassis/VectorShapes`
 
-```mermaid
-flowchart LR
-    classDef chassis fill:#312,stroke:#a3a,color:#fff
-    classDef demo fill:#125,stroke:#5af,color:#fff
-    classDef leaf  fill:#222,color:#aaa,stroke:#666
+Generalises the path idioms that Pohaku's renderer hand-rolls (its `BuildPath` for the ship/life icons, its translate-rotate-stroke asteroid loop) into three reusable calls:
 
-    Vec2[Vec2]:::chassis
-    HS[HighScoreStore]:::chassis
-    ASB[AmbientStarBackdrop]:::chassis
-    AEB[AudioEngineBase]:::chassis
-    NP[NeonPaints]:::chassis
-    ND[NeonDraw]:::chassis
-    NBG[NeonBackground]:::chassis
-    HsvC[HsvColor]:::chassis
-    HT[HudText]:::chassis
-    GF[GlyphFont]:::chassis
-    MQ[Marquee]:::chassis
-    PB[PlayfieldBorder]:::chassis
-
-    subgraph "Arcade Family"
-        PH[Pohaku]:::demo
-        HK[HokuLele]:::demo
-        LU[Lua]:::demo
-        MA[Mahina]:::demo
-        HE[Heiau]:::demo
-        KA[Kanapi]:::demo
-        AL[Alaloa]:::demo
-        HA[Hahai]:::demo
-    end
-    LC[Launcher]:::demo
-
-    PH & HK & LU & MA & HE & KA & AL & HA & LC --> Vec2
-    PH & HK & LU & MA & HE & KA & AL & HA --> HS
-    PH & HK & LU & MA & HE & KA & AL & HA & LC --> ASB
-    PH & HK & LU & MA & HE & KA & AL & HA --> AEB
-    PH & HK & LU & MA & HE & KA & AL & HA & LC --> NP & ND & NBG & HT & MQ & GF & HsvC
-    PH & HK & LU & MA & HE & KA --> PB
+```csharp
+SKPath Poly(ReadOnlySpan<SKPoint> points, bool close);          // bake a point list into a cached path
+SKPath Blob(Random rng, float radius, int verts, float jitter); // lumpy closed polygon (asteroids, rocks)
+void   DrawAt(SKCanvas c, SKPath path, float x, float y,        // Save/Translate/Rotate/Scale + neon stroke
+              float rotation, float scale, SKColor color);      //   → Restore
 ```
 
-Launcher uses every chassis piece except `AudioEngineBase` (silent by design) and `HighScoreStore` (no game state to persist). Alaloa and Hahai skip `PlayfieldBorder` because their grids already frame themselves.
+`Poly` uses `SKPathBuilder` + `Detach()` (the SkiaSharp 4 idiom) rather than the deprecated `SKPath.MoveTo`/`LineTo` instance API. The returned path is owned by the caller — build once at startup, draw every frame. `Blob` clamps jitter to `[0, 0.99]` so a radius can never collapse or invert, and takes the `Random` from the caller so a given rock reproduces the same silhouette. `DrawAt` takes rotation in **degrees** (matching `SKCanvas.RotateDegrees`) and fully restores the canvas transform, so cached paths stay origin-centred in their own local coordinates.
+
+### `Chassis/Camera2D`
+
+The scrolling/zooming viewport. Every demo up to Hahai scaled **one fixed world to fit the canvas**; `Camera2D` is what replaced that inline transform for the games whose world is larger than the screen. It is deliberately a single class serving two opposite needs — Kia'i's horizontally *wrapping* world and Koa's *bounded* dungeon — because the only real divergence is per-axis framing policy:
+
+```csharp
+public enum AxisMode { Free, Clamp, Wrap }
+
+public struct CameraAxis {
+    public AxisMode Mode;
+    public float WorldSize;    // Wrap: torus circumference. Clamp: world extent (lower bound 0).
+    public float LookAhead;    // bias the followed point toward travel direction (world units)
+    public float FollowRate;   // exp-lerp stiffness; <= 0 means snap (no easing)
+}
+```
+
+`Camera2D` holds `CenterX/CenterY` (the world point at the viewport middle), `ViewW/ViewH` (pixels, set from `SetViewport`), `Zoom` (world units → pixels), and one `CameraAxis` per axis.
+
+| Group | Members |
+|---|---|
+| Framing | `SetViewport(w,h)`, `Left`, `Top`, `VisibleWorldRect(pad)` |
+| Following | `Follow(tx,ty,dt)`, `FollowLookAhead(tx,ty,vx,vy,dt)`, `Snap(x,y)` |
+| Transforms | `ToScreenX/Y`, `ToScreen(Vec2)`, `ToWorldX/Y`, `ToWorld(Vec2)`, `Apply(canvas)` |
+| Seam replicas | `ForEachVisibleX(worldX, pad, cb)`, `ForEachVisibleY(...)` |
+| Toroidal statics | `Wrap(v, size)`, `WrapDelta(a, b, size)` |
+
+Three details carry most of the weight:
+
+- **`Wrap` / `WrapDelta` are `static`** so collision and AI code can do toroidal nearest-distance math without holding a camera. `Wrap` is a positive modulo (folds negatives correctly, unlike `%`); `WrapDelta(a,b,size)` returns the *shortest signed* path from `a` to `b` around the loop, in `(-size/2, size/2]`.
+- **Every wrap-aware path routes through `WrapDelta`** — screen mapping, follow easing, and seam replication. That's why an entity one pixel past the seam reads as one pixel away rather than a world away, and why the camera eases the short way around the loop instead of unwinding across it.
+- **`Follow` easing is frame-rate independent.** The blend factor is `1 - exp(-FollowRate * dt)`, which converges at the same wall-clock rate at any frame time. `FollowRate <= 0` collapses to a snap.
+
+```mermaid
+flowchart TB
+    subgraph Wrap["Wrap axis (Kia'i X)"]
+        W1[world X] --> W2["WrapDelta(CenterX, worldX, WorldSize)"]
+        W2 --> W3["ViewW/2 + delta * Zoom"]
+        W3 --> W4["ForEachVisibleX<br/>draws base + ±WorldSize replicas<br/>so seam-straddling sprites appear twice"]
+    end
+    subgraph Clamp["Clamp axis (Koa X and Y)"]
+        C1[world X] --> C2["(worldX - CenterX) * Zoom + ViewW/2"]
+        C2 --> C3["centre held between halfView<br/>and WorldSize - halfView<br/>→ never shows past the world edge"]
+        C3 --> C4["Apply(canvas): Scale + Translate<br/>then VisibleWorldRect culls tiles"]
+    end
+```
+
+How the two consumers configure it:
+
+- **Kia'i** — `X = { Mode = Wrap, WorldSize = WorldWidth, LookAhead = ViewW * 0.25f, FollowRate = 3.5f }`, `Y = { Mode = Free }` (its world is one screen tall). It calls `FollowLookAhead` with the ship's **facing sign** rather than its velocity, so the view leads where the pilot is aiming even while drifting backwards. Entities draw through `ForEachVisibleX`; collision and AI call the `WrapDelta` static directly.
+- **Koa** — both axes `Mode = Clamp` with `WorldSize` from `TileGrid.WorldWidth`/`WorldHeight` and `FollowRate = 0` (snap, so the dungeon never swims under the hero). Uses `Apply(canvas)` for the world→screen transform and `VisibleWorldRect` to cull tiles and entities.
+
+`Apply` is a single affine `Scale` + `Translate`, so it does **not** replicate across a seam — wrapped worlds must draw via `ForEachVisibleX/Y` or per-entity `ToScreen*`. `Apply` calls `canvas.Save()`; **the caller restores**.
+
+### `Chassis/Radar`
+
+A minimap projection: compresses a whole world into a small canvas-space rectangle and plots blips. `SetRect(left,top,w,h)` + `SetWorld(worldW,worldH)` configure it; `DrawBlip`, `DrawTerrain(heightAt, color, samples)`, and `DrawFrame` paint it.
+
+Two projection modes, selected by `WrapX`:
+
+- **`WrapX = true`** (Kia'i's Defender scanner) — the strip is centred on `FocusX` (the player's world X) and a blip's horizontal position is its shortest signed *toroidal* distance from that focus. The ship marker stays dead centre while the world scrolls under it.
+- **`WrapX = false`** — a plain linear `[0, WorldWidth] → strip` map; the whole world shown statically.
+
+Y is always a linear `[0, WorldHeight]` map. The radar is HUD, not world, so it is drawn in canvas space **after** any camera transform has been restored.
+
+### `Chassis/SeamlessTerrain`
+
+A periodic 1-D height field for X-wrapping worlds (Kia'i's planet surface). The point of the piece is a terrain whose seam is *mathematically* invisible: every component sinusoid has a period that is an exact integer divisor of the world width, so `HeightAt(0)` and its slope equal `HeightAt(WorldWidth)` and its slope. There is no special-casing at the seam.
+
+A term `cos(2π · harmonic · x / WorldWidth)` completes exactly `harmonic` whole cycles across the world, so summing terms at integer harmonics yields a function genuinely periodic with period `WorldWidth` — no height step and no kink. The constructor forces each harmonic to a positive integer defensively, weights amplitude by `1/h` so the low harmonics carry the big rolling shapes and the high ones only add texture, and normalises the sum so worst case lands exactly on `Amplitude`. The default set `{3, 7, 13, 23}` gives a few large hills textured by finer ripples; phases come from a caller-supplied `Random`, so a seeded one reproduces the same planet. `HeightAt(x)` wraps its input first, so any `x` is valid.
+
+`SlopeAt(x)` gives the analytic derivative (used to orient ground-hugging entities), and `IsFlat(x, halfSpan, maxRise)` answers "is this a legal landing/spawn spot". `BuildVisibleStrip(cam, viewW, stepPx)` samples just the on-screen span into an `SKPath`. Coordinate convention matches the rest of the chassis: world Y grows **downward**, so a larger `HeightAt` means lower on screen.
+
+### `Chassis/TileGrid<T>`
+
+A fixed-size 2-D grid of value-type cells plus the cell math and motion resolver every top-down tile game needs — the generalisation of the bespoke `Arena`/`Grid` types in Hahai and Kanapi.
+
+`T` is constrained to `struct` (Koa passes a `Tile` enum) so the backing store is one flat blittable array with no per-cell allocation. Cell math: `Cols`, `Rows`, `CellSize`, `WorldWidth`/`WorldHeight` (the bounds a clamped `Camera2D` frames to), `InBounds`, `this[col,row]`, `CellCenter`, `CellRect`, `WorldToCell`. `WorldToCell` floors, so off-grid points map to negative cells that `InBounds` then rejects — callers never get a false in-bounds.
+
+The load-bearing method is the collision resolver:
+
+```csharp
+bool MoveCircle(ref Vec2 pos, float radius, float dx, float dy, Func<int,int,bool> isSolid);
+```
+
+It moves a circle by `(dx, dy)` against solid tiles and writes the resolved position back, returning `true` if either axis was blocked (Koa uses that to expire wall-struck projectiles). Two properties matter:
+
+- **Axes resolve independently.** X is applied and clamped against any solid cell the circle's vertical extent overlaps, then Y is applied from the already-updated X. That separation *is* the Gauntlet wall-slide: pushing diagonally into a wall zeroes only the blocked axis, so the body keeps gliding along the free one. A single swept test over both axes would snag and kill all motion.
+- **The move is sub-stepped.** No sub-step advances more than half a cell on the dominant axis, so a fast entity can't tunnel through a one-tile-thick wall. Each sub-step clamps the leading face flush onto the wall's near face, which also stops a body already flush against a wall from drifting into it.
+
+The grid itself has no notion of solidity; the caller supplies `isSolid` because solidity is game-specific (a Koa door is solid until a key opens it).
+
+### `Chassis/AsciiMap`
+
+Authored-level helper: validate a rectangular block of ASCII rows, then call back once per glyph.
+
+```csharp
+(int cols, int rows) Parse(IReadOnlyList<string> rows, Action<int,int,char> onCell);
+```
+
+Generalises the hand-rolled "`string[] Layout` + nested-loop switch" idiom in Hahai's `Arena` constructor. It throws `ArgumentException` on an empty or **ragged** map — a ragged row is a content bug, and far cheaper to catch at load time than to chase as a mis-rendered tile. Returns the dimensions so the caller can size a matching `TileGrid`.
+
+`AsciiMap` knows nothing about tiles or entities: it walks the grid and hands each glyph to the game, which decides that `#` is a wall and `G` is a generator. That terrain-vs-feature split lives in the consumer (`Koa.Level`).
+
+### `Chassis/FlowField`
+
+A multi-source breadth-first distance field over a walkable grid, plus the per-cell "step toward the nearest source" direction it implies — the swarm-AI workhorse for "many enemies chase the player" (Koa's generator hordes).
+
+Instead of every enemy running its own pathfind each frame (`O(enemies × search)`, and prone to corner-clipping around concave walls), one field floods outward from the hero cell(s) every few frames and each enemy reads its precomputed best neighbour. Cost is `O(cells)` per rebuild, shared by all enemies, and the routing is correct around concave geometry because BFS distance *is* true shortest-path-on-the-grid.
+
+```csharp
+void Rebuild(int sourceCol, int sourceRow, Func<int,int,bool> isWalkable);
+void Rebuild(ReadOnlySpan<(int col, int row)> sources, Func<int,int,bool> isWalkable);
+int  Dist(int col, int row);          // Unreachable (int.MaxValue) for walls / unreached
+(int dc, int dr) FlowDir(int col, int row);
+```
+
+Multi-source is free: seed every hero cell at distance 0 and the flood yields "distance to the *nearest* hero" everywhere — co-op "chase whoever is closest" with no extra code. The flood is 4-connected; diagonal movement is left to the consumer's continuous mover (Koa steps via `TileGrid.MoveCircle`), so enemies that want to cut a diagonal blend two adjacent cardinal flows. Unreachable cells yield a zero `FlowDir`.
+
+## Chassis-by-demo usage matrix
+
+**Core neon tier** — `●` = the project references the piece directly.
+
+| Project | `Vec2` | `HighScoreStore` | `AmbientStarBackdrop` | `AudioEngineBase` | `NeonDraw` | `NeonBackground` | `HsvColor` | `HudText` | `GlyphFont` | `Marquee` | `PlayfieldBorder` |
+|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
+| Pohaku    | ● |   |   | ● |   |   |   |   |   |   |   |
+| HokuLele  | ● | ● | ● | ● | ● | ● |   | ● |   | ● | ● |
+| Lua       | ● | ● | ● | ● | ● | ● |   | ● | ● | ● | ● |
+| Mahina    | ● | ● | ● | ● | ● | ● |   | ● | ● | ● | ● |
+| Heiau     | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● |
+| Kanapi    | ● | ● | ● | ● | ● | ● |   | ● | ● | ● | ● |
+| Alaloa    | ● | ● | ● | ● | ● | ● |   | ● | ● | ● | ● |
+| Hahai     | ● | ● | ● | ● | ● | ● |   | ● | ● | ● |   |
+| Paku      | ● | ● |   | ● |   |   | ● | ● |   | ● |   |
+| Kia'i     | ● | ● | ● | ● | ● | ● |   | ● |   | ● |   |
+| Koa       | ● | ● | ● | ● | ● | ● |   | ● | ● | ● |   |
+| Launcher  | ● |   | ● |   |   | ● |   | ● | ● | ● |   |
+
+**Scrolling-world tier** — only the two games the tier was built for consume these:
+
+| Project | `Camera2D` | `VectorShapes` | `Radar` | `SeamlessTerrain` | `TileGrid<T>` | `AsciiMap` | `FlowField` |
+|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
+| Kia'i | ● (wrap X / free Y) | ● | ● | ● |   |   |   |
+| Koa   | ● (clamp X + Y)     | ● |   |   | ● | ● | ● |
+
+Reading the matrix:
+
+- **`NeonPaints` is deliberately absent.** It is the paint pool that `NeonDraw`, `HudText`, and `Marquee` mutate internally, so every project using any of those depends on it transitively — listing it as a direct reference would say nothing. Likewise `GlyphFont` is reached indirectly by everything that draws a `Marquee`; the `●` marks only direct use (a demo drawing its own glyph paths).
+- **Pohaku is the outlier.** It predates the chassis and hand-rolls its own neon paints, marquee, and HUD text locally, so it shares only `Vec2` and `AudioEngineBase`. It is the reference implementation the chassis was factored *out of*, not a consumer of the result.
+- **Launcher** skips `AudioEngineBase` (silent by design) and `HighScoreStore` (no game state to persist).
+- **Paku** brings its own animated plasma backdrop instead of `AmbientStarBackdrop`, and draws its organic blobs with bespoke wobble geometry rather than `NeonDraw`.
+- **`PlayfieldBorder`** is skipped by Hahai (its maze frames itself), Paku (unbounded arena), and Kia'i / Koa (the world extends past the viewport, so there is no on-screen edge to draw).
+- **Paku is a third moving-viewport game that does *not* use `Camera2D`.** It keeps its own `CameraX` / `CameraY` / `Zoom` on `GameWorld`, because its requirement is the one the chassis camera doesn't model: zoom that continuously shrinks as the player's blob grows. Paku landed *after* the scrolling-world tier existed and still didn't adopt it, so it is the natural first consumer if `Camera2D` ever grows a zoom-follow mode. Until then, don't assume the tier covers every camera in the repo.
