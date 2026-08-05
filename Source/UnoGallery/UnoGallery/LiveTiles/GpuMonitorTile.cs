@@ -1,33 +1,25 @@
 #pragma warning disable CS0618 // SKPath obsolete in v4
-#pragma warning disable CA1416 // PerformanceCounter is windows-only — guarded by HAS_PERFCOUNTERS already
 using SkiaSharp;
-
-#if HAS_PERFCOUNTERS
-using System.Diagnostics;
-#endif
+using UnoGallery.Diagnostics;
 
 namespace UnoGallery.LiveTiles;
 
 /// <summary>
-/// Live GPU utilisation as an ECG-style scrolling trace. On Windows this
-/// taps the "GPU Engine \ Utilization Percentage" performance-counter
-/// category, sums the "engtype_3D" instances across the system, and clamps
-/// to 100 %. On other platforms (or when the counters aren't available)
-/// the trace flatlines at zero — better than crashing.
+/// Live GPU utilisation as an ECG-style scrolling trace. The actual measuring
+/// is <see cref="GpuUsageSampler"/>'s job, on a background thread — reading the
+/// Windows GPU perf counters costs hundreds of milliseconds and must never
+/// happen inside a paint. This tile only ever reads the last published value
+/// and scrolls it. Where the counters are unavailable (non-Windows, or PDH
+/// disabled) the trace flatlines and the readout says so.
 /// </summary>
 public sealed class GpuMonitorTile : ILiveTile
 {
     const int History = 80;
-    const float SampleInterval = 0.5f;   // perf counters update at ~1 Hz; oversample for smooth scroll
+    const float SampleInterval = 0.5f;   // trace scroll rate, not the counter read rate
 
     readonly float[] _samples = new float[History];
     float _lastSampleTime = -1f;
     int _writeIdx;
-
-#if HAS_PERFCOUNTERS
-    readonly List<PerformanceCounter> _counters = new();
-    bool _initFailed;
-#endif
 
     public string Caption => "GPU";
 
@@ -39,6 +31,7 @@ public sealed class GpuMonitorTile : ILiveTile
 
     public void Draw(SKCanvas canvas, SKRect dest, float t)
     {
+        GpuUsageSampler.Instance.EnsureStarted();
         Sample(t);
 
         using var bg = new SKPaint { Color = Palette[0] };
@@ -49,57 +42,18 @@ public sealed class GpuMonitorTile : ILiveTile
         DrawReadout(canvas, dest);
     }
 
+    /// <summary>
+    /// Advance the scrolling trace. This is just a ring-buffer write of a value
+    /// the background sampler already computed — no I/O, no PDH, no blocking.
+    /// </summary>
     void Sample(float t)
     {
         if (_lastSampleTime < 0f) { _lastSampleTime = t; return; }
         if (t - _lastSampleTime < SampleInterval) return;
 
-        float usage = ReadGpu();
-        _samples[_writeIdx] = Math.Clamp(usage, 0f, 1f);
+        _samples[_writeIdx] = GpuUsageSampler.Instance.Latest;
         _writeIdx = (_writeIdx + 1) % History;
         _lastSampleTime = t;
-    }
-
-    float ReadGpu()
-    {
-#if HAS_PERFCOUNTERS
-        if (_initFailed) return 0f;
-
-        if (_counters.Count == 0)
-        {
-            try
-            {
-                var cat = new PerformanceCounterCategory("GPU Engine");
-                foreach (var inst in cat.GetInstanceNames())
-                {
-                    if (!inst.Contains("engtype_3D", StringComparison.Ordinal)) continue;
-                    var c = new PerformanceCounter("GPU Engine", "Utilization Percentage", inst, readOnly: true);
-                    _ = c.NextValue(); // prime — first read is always 0
-                    _counters.Add(c);
-                }
-                if (_counters.Count == 0) _initFailed = true;
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"[GpuMonitor] init failed: {ex.Message}");
-                _initFailed = true;
-                return 0f;
-            }
-        }
-
-        try
-        {
-            float total = 0f;
-            foreach (var c in _counters) total += c.NextValue();
-            return total / 100f;
-        }
-        catch
-        {
-            return 0f;
-        }
-#else
-        return 0f;
-#endif
     }
 
     void DrawGrid(SKCanvas canvas, SKRect dest)
@@ -163,7 +117,10 @@ public sealed class GpuMonitorTile : ILiveTile
         float current = _samples[(_writeIdx - 1 + History) % History];
         var color = current > 0.75f ? Palette[3] : current > 0.4f ? Palette[2] : Palette[1];
 
-        string label = $"GPU  {current * 100f:F0}%";
+        bool live = GpuUsageSampler.Instance.Available;
+        if (!live) color = Palette[1];
+
+        string label = live ? $"GPU  {current * 100f:F0}%" : "GPU  n/a";
         using var font = new SKFont { Size = MathF.Max(11f, dest.Width / 22f) };
         using var fg = new SKPaint { Color = color, IsAntialias = true };
         using var shadow = new SKPaint { Color = new SKColor(0, 0, 0, 180), IsAntialias = true };

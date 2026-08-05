@@ -2,6 +2,7 @@ using System.Numerics;
 using SkiaSharp;
 using UnoGallery.Audio;
 using UnoGallery.Data;
+using UnoGallery.Diagnostics;
 using UnoGallery.Effects;
 using UnoGallery.Layouts;
 using UnoGallery.Models;
@@ -59,7 +60,8 @@ public sealed class SceneController
         // One FFT + beat-detection tick per frame, against whichever audio
         // source the user has selected. WaveformTile reads the spectrum;
         // BackgroundPass reads the beat pulse.
-        AudioSourceManager.Instance.Update(wallClockSeconds);
+        using (FrameProfiler.Measure("audio.update"))
+            AudioSourceManager.Instance.Update(wallClockSeconds);
 
         if (_state.TargetLayout is LayoutMode target)
         {
@@ -173,10 +175,15 @@ public sealed class SceneController
         }
 
         var items = _state.Items.AsSpan();
-        var current = ComputeRawPlacements(_state.CurrentLayout, items, size);
-        ItemPlacement[]? target = _state.TargetLayout is LayoutMode t
-            ? ComputeRawPlacements(t, items, size)
-            : null;
+        ItemPlacement[] current;
+        ItemPlacement[]? target;
+        using (FrameProfiler.Measure("placements"))
+        {
+            current = ComputeRawPlacements(_state.CurrentLayout, items, size);
+            target = _state.TargetLayout is LayoutMode t
+                ? ComputeRawPlacements(t, items, size)
+                : null;
+        }
         _effects.Render(canvas, size, _state, current, target);
     }
 

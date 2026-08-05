@@ -6,6 +6,7 @@ using Microsoft.UI.Xaml.Media;
 using SkiaSharp;
 using Uno.WinUI.Graphics2DSK;
 using UnoGallery.Data;
+using UnoGallery.Diagnostics;
 using UnoGallery.Models;
 using Windows.Storage;
 using WinSize = Windows.Foundation.Size;
@@ -77,13 +78,17 @@ public sealed class GallerySurface : SKCanvasElement
 
     void OnRendering(object? sender, object args)
     {
+        RenderCadence.BeginTick();
         _controller?.Tick((float)_clock.Elapsed.TotalSeconds);
         Invalidate();
+        RenderCadence.EndTick();
     }
 
     protected override void RenderOverride(SKCanvas canvas, WinSize area)
     {
+        var stamp = RenderCadence.BeginPaint();
         _controller?.Render(canvas, new SKSize((float)area.Width, (float)area.Height));
+        RenderCadence.EndPaint(stamp);
     }
 
     (float vx, float vy, SKSize size) ViewportCoords(PointerRoutedEventArgs e)
