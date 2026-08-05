@@ -76,6 +76,12 @@ public sealed class MandalaTile : ILiveTile
     /// </summary>
     void DrawSourceWedge(SKCanvas canvas, float r, float t)
     {
+        // Scratch buffer for the arc samples, reused across all four petals —
+        // allocated once outside the loop (a stackalloc per iteration would
+        // accumulate stack, which is what CA2014 warns about).
+        const int Seg = 24;
+        Span<SKPoint> pts = stackalloc SKPoint[Seg + 1];
+
         // 1. Petal arcs — a few curves swept along the wedge, drifting with time.
         for (int i = 0; i < 4; i++)
         {
@@ -90,17 +96,24 @@ public sealed class MandalaTile : ILiveTile
                 IsAntialias = true,
                 StrokeCap = SKStrokeCap.Round,
             };
-            using var path = new SKPath();
-            int seg = 24;
-            for (int s = 0; s <= seg; s++)
+            // Sample the modulated arc into the span first, so the only
+            // version-specific part is how the points become a path.
+            for (int s = 0; s <= Seg; s++)
             {
-                float a = (s / (float)seg) * (MathF.Tau / Symmetry);
+                float a = (s / (float)Seg) * (MathF.Tau / Symmetry);
                 float modR = arcR + MathF.Sin(a * 6f + t * 1.3f + i) * r * 0.025f + drift * r;
-                float px = MathF.Cos(a) * modR;
-                float py = MathF.Sin(a) * modR;
-                if (s == 0) path.MoveTo(px, py);
-                else path.LineTo(px, py);
+                pts[s] = new SKPoint(MathF.Cos(a) * modR, MathF.Sin(a) * modR);
             }
+#if SKIA_V4
+            // SKPathBuilder is v4-only; SKPath's mutable MoveTo/LineTo are obsolete there.
+            using var builder = new SKPathBuilder();
+            builder.AddPoly(pts, close: false);
+            using var path = builder.Snapshot();
+#else
+            using var path = new SKPath();
+            path.MoveTo(pts[0]);
+            for (int s = 1; s <= Seg; s++) path.LineTo(pts[s]);
+#endif
             canvas.DrawPath(path, paint);
         }
 

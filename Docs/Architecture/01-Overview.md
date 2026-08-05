@@ -66,7 +66,7 @@ Every demo is fully self-contained under `Source/<Demo>/`:
 - Its own `.sln`, `.csproj`, `Directory.Build.props`, `Directory.Packages.props`, `global.json`.
 - No shared MSBuild root targets that would cascade across demos.
 - No aggregator solution at the repo root.
-- Different SkiaSharp versions per demo are explicitly allowed (UnoGallery and KahuaNetwork still pin SkiaSharp 3.119.4 while the arcade family + Launcher pin SkiaSharp 4.151.0).
+- Different SkiaSharp versions per demo are explicitly allowed. KahuaNetwork pins SkiaSharp 3.119.4; everything else runs 4.151.0. UnoGallery keeps a `$(SkiaSharpVersion)` switch so either line can be built on demand — that per-demo freedom is what made re-testing a SkiaSharp 4 native crash a one-command job when the fix landed.
 
 ```mermaid
 flowchart LR

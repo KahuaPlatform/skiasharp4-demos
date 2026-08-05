@@ -1,9 +1,11 @@
 // Cinematic tone grade as an SKSL color filter.
 //
 // Lifts shadows toward teal, pushes highlights toward warm orange, slightly
-// raises overall saturation. Pure per-pixel function with NO uniforms — that's
-// deliberate, to dodge SkiaSharp 4.147.0-preview.3.1's broken uniform-table
-// path (`sk_runtimeeffect_get_uniform_byte_size`).
+// raises overall saturation. Pure per-pixel function with NO uniforms — which
+// was originally deliberate, to dodge SkiaSharp 4.147.0-preview.3.1's broken
+// uniform-table path (`sk_runtimeeffect_get_uniform_byte_size`). That bug is
+// fixed as of 4.151.0, so uniforms are an option here now if this grade ever
+// needs to be parameterised; it stays uniform-free simply because it doesn't.
 //
 // Entry: half4 main(half4 c)
 

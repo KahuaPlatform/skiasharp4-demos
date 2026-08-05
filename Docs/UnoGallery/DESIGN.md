@@ -55,7 +55,7 @@ Compared to `SKXamlCanvas` (the older event-based API in `SkiaSharp.Views`), `SK
 - Receives sizes / coordinates in DIPs (device-independent pixels) — pointer math and rendering share one coordinate system.
 - Composes natively with XAML transforms, opacity, clipping.
 
-### 2.2 SkiaSharp: v3 by default, v4 opt-in
+### 2.2 SkiaSharp: v4 by default, v3 still buildable
 
 The original plan pinned SkiaSharp **4.147.0-preview.3.1**. Reality was messier:
 
@@ -63,34 +63,50 @@ The original plan pinned SkiaSharp **4.147.0-preview.3.1**. Reality was messier:
 - ABI risk: every Uno runtime DLL was compiled against 3.119.x and forced to bind to 4.x preview natives.
 - The new API forms we *do* want (`SKPathBuilder`, `SKSamplingOptions`, `DrawImage(SKImage, SKRect, SKSamplingOptions)`) are also in 3.116+, so they don't justify the pin.
 
-So the project defaults to **3.119.4 stable** and lets you opt into v4 as a build property:
+So for a long stretch the project defaulted to **3.119.4 stable**. That is no longer the case — **SkiaSharp 4.151.0 is the default** and the v3 line is the override:
 
 ```bash
-dotnet build                                     # 3.119.4 stable (default)
-dotnet build -p:SkiaSharpVersion=4.151.0         # SkiaSharp 4 (stable line)
+dotnet build                                     # 4.151.0 stable (default)
+dotnet build -p:SkiaSharpVersion=3.119.4         # older SkiaSharp 3 line
 ```
 
-**Version note.** The opt-in target is now **4.151.0**, by which point SkiaSharp 4 had shipped stable; the pin block's `HarfBuzzSharp` entries moved with it to **14.2.1** (what SkiaSharp 4.151.0 declares — the 4.147 previews wanted 8.3.1.6-preview.3.1, a different version line entirely). The AV above was measured on 4.147.0-preview.3.1 and has **not** been re-tested on 4.151.0: the `SKIA_V4` gates keep the uniforms path out of the v4 build, so nothing exercises it. An isolated console probe (bare SkiaSharp, CPU raster surface, no Uno) drove `SKRuntimeEffectUniforms`, `ToShader(uniforms)` and `SKRuntimeShaderBuilder.Build()` and passed on *both* versions — so the control never reproduced, and the trigger evidently needs Uno's GPU-backed surface or these specific uniform layouts. Re-testing means temporarily flipping the two `SKIA_V4` gates and doing a visual pass.
+**What changed.** The AV was fixed somewhere between 4.147.0-preview.3.1 and 4.151.0. Establishing that took three passes, and the first two were dead ends worth recording:
+
+1. A synthetic console probe (bare SkiaSharp, CPU raster surface, no Uno) with one `float` + one `float2` uniform — passed on *both* 4.147-preview and 4.151.0.
+2. The same harness loading all seven real `.sksl` files with their real uniform signatures, including the `float3` in `HoverGlow` and the `uniform shader` children in `ChromaShift` / `Dissolve` / `Iris` — again passed on 4.147-preview, 4.151.0 *and* 3.119.4, with byte-identical centre pixels.
+
+   Because the control never reproduced, neither probe could say anything about 4.151.0. The useful conclusion is negative: **this defect class is not reachable from a bare-SkiaSharp harness**, so don't try to regression-test it that way. It needed the Uno host.
+3. Removing the `#if SKIA_V4` gate in `ShaderLibrary` and running the real app at 4.151.0 — all six effects compile, and temporary instrumentation confirmed `BackgroundPass` takes the SKSL plasma branch rather than the gradient fallback. (That check mattered: `TryCompileShader` swallows exceptions and returns null, so a failure would have silently degraded to the fallback and *looked* fine.)
+
+The pin block's `HarfBuzzSharp` entries moved with the bump to **14.2.1** — what SkiaSharp 4.151.0 declares. The 4.147 previews wanted 8.3.1.6-preview.3.1; the two are unrelated version lines, so read the target `SkiaSharp.HarfBuzz` nuspec rather than comparing numbers.
 
 `Directory.Build.props` defines `$(SkiaSharpVersion)` and conditionally adds `SKIA_V4` to `$(DefineConstants)`. `Directory.Packages.props` gates `CentralPackageTransitivePinningEnabled` and a 17-line transitive pin block behind `$(SkiaSharpVersion.StartsWith('4.'))` — v3 needs no pinning; Uno's runtime libs declare `SkiaSharp >= 3.119.0` which unifies cleanly. v4 needs the pin to drag `SkiaSharp.Views`, `NativeAssets.*`, and `HarfBuzzSharp.*` up off their 3.119 floors.
 
-Only two source sites use the compile symbol today:
-1. `ProceduralSampleSource.DrawCurveFlow` — `SKPathBuilder` on v4, `SKPath` on v3.
-2. `ShaderLibrary` constructor — all uniforms-bearing shaders are loaded only when `!SKIA_V4`. On v4, those properties stay null and consumers fall back to non-SKSL primitives.
+`SKIA_V4` now gates only genuinely version-specific APIs, not workarounds. `SKPathBuilder` was verified **absent from 3.119.4**, so the three sites that build paths keep a split:
+
+1. `ProceduralSampleSource.DrawCurveFlow`
+2. `MandalaTile` — samples the modulated arc into a `Span<SKPoint>` first, so only the points→path step differs.
+3. `WireframeTile` — accumulates into eight depth-bucketed builders on v4, then snapshots into the `SKPath[]` the draw loop expects.
+
+`SKSamplingOptions` and its `DrawImage` overloads exist on **both** lines, so `CurlNoiseTile` and `FolderSource` use them unconditionally — it's the paint/`FilterQuality` overloads that v4 obsoletes.
+
+The `ShaderLibrary` gate is gone entirely: every effect loads on both versions. Consumers still null-check, so a future regression degrades to the non-SKSL fallbacks instead of crashing.
 
 ### 2.3 What we actually use from SkiaSharp
 
-| Area | API | v3 (3.119.4) | v4 (4.147.0-preview.3.1) |
-|---|---|---|---|
-| Procedural drawing | `SKShader`, `SKPaint`, gradients, `CreatePerlinNoiseTurbulence` | ✅ | ✅ |
-| Image decode | `SKCodec` → `SKBitmap.Decode(codec)` → canvas downscale | ✅ | ✅ |
-| Per-frame composition | `SKPictureRecorder` → `SKPicture` → `canvas.DrawPicture` | ✅ | ✅ |
-| Image filters | `SKImageFilter.CreateBlur`, `CreateDropShadowOnly` | ✅ | ✅ |
-| Color filters from SKSL | `SKRuntimeEffect.CreateColorFilter` + `ToColorFilter()` | ✅ | ✅ |
-| Shaders from SKSL with uniforms | `SKRuntimeEffect.CreateShader` + `ToShader(uniforms, children)` | ✅ | ❌ AV |
-| Picture as a shader child | `SKShader.CreatePicture(picture, ...)` | ✅ | ✅ |
+| Area | API | v3 (3.119.4) | v4.147-preview | v4 (4.151.0) |
+|---|---|---|---|---|
+| Procedural drawing | `SKShader`, `SKPaint`, gradients, `CreatePerlinNoiseTurbulence` | ✅ | ✅ | ✅ |
+| Image decode | `SKCodec` → `SKBitmap.Decode(codec)` → canvas downscale | ✅ | ✅ | ✅ |
+| Per-frame composition | `SKPictureRecorder` → `SKPicture` → `canvas.DrawPicture` | ✅ | ✅ | ✅ |
+| Image filters | `SKImageFilter.CreateBlur`, `CreateDropShadowOnly` | ✅ | ✅ | ✅ |
+| Color filters from SKSL | `SKRuntimeEffect.CreateColorFilter` + `ToColorFilter()` | ✅ | ✅ | ✅ |
+| Shaders from SKSL with uniforms | `SKRuntimeEffect.CreateShader` + `ToShader(uniforms, children)` | ✅ | ❌ AV | ✅ |
+| Picture as a shader child | `SKShader.CreatePicture(picture, ...)` | ✅ | ✅ | ✅ |
+| Immutable path building | `SKPathBuilder` + `Snapshot()` | ❌ absent | ✅ | ✅ |
+| Explicit sampling | `DrawImage(img, dest, SKSamplingOptions)` | ✅ | ✅ | ✅ |
 
-The third row is the killer: SKSL uniforms worked on v3 and crashed on the 4.147 preview. That's why the default ships on v3 — and why that row is still marked ❌ even though the opt-in now points at 4.151.0, since nobody has re-measured it there.
+The uniforms row was the killer for as long as the 4.147 preview was the v4 target: it worked on v3, crashed there, and cost five of the six effects. On 4.151.0 it works, which is what allowed the default to move to v4.
 
 ### 2.4 Targets & renderer
 
@@ -454,11 +470,11 @@ No mip-chain LRU yet. With 512-px tiles, ~30 items is ~30 MB. Real photo sets in
 
 ```mermaid
 flowchart LR
-    Default["dotnet build<br/>(no override)"] --> V3["SkiaSharpVersion = 3.119.4<br/>SKIA_V4 not defined"]
-    Override["dotnet build<br/>-p:SkiaSharpVersion=4.151.0"] --> V4["SkiaSharpVersion = 4.151.0<br/>SKIA_V4 defined<br/>pin block active"]
+    Default["dotnet build<br/>(no override)"] --> V4["SkiaSharpVersion = 4.151.0<br/>SKIA_V4 defined<br/>pin block active"]
+    Override["dotnet build<br/>-p:SkiaSharpVersion=3.119.4"] --> V3["SkiaSharpVersion = 3.119.4<br/>SKIA_V4 not defined"]
 
-    V3 --> Outcome3["All 6 SKSL effects active<br/>No transitive pin needed<br/>Stable runtime"]
-    V4 --> Outcome4["Only ToneGrade SKSL active<br/>(parameterless ColorFilter path)<br/>Other effects fall back to primitives<br/>Pin block forces transitive deps to 4.x"]
+    V4 --> Outcome4["All 6 SKSL effects active<br/>SKPathBuilder path construction<br/>Pin block forces transitive deps to 4.x<br/>(incl. HarfBuzzSharp 14.2.1)"]
+    V3 --> Outcome3["All 6 SKSL effects active<br/>SKPath.MoveTo/LineTo construction<br/>No transitive pin needed"]
 ```
 
 What's behind `#if SKIA_V4` in the codebase:
@@ -555,7 +571,7 @@ If a target falls behind, the cuts in order are: bloom → grain → chroma → 
 
 | What | What we learned |
 |---|---|
-| SkiaSharp 4 ABI risk | Hit a real native AV in `SKRuntimeShaderBuilder` / `SKRuntimeEffectUniforms..ctor` on first paint. Workaround: default to v3.119.4. Code path retained for v4 retest. |
+| SkiaSharp 4 ABI risk | Hit a real native AV in `SKRuntimeShaderBuilder` / `SKRuntimeEffectUniforms..ctor` on first paint on 4.147.0-preview.3.1. Workaround at the time: default to v3.119.4, retain the v4 path for retest. The retest happened — fixed in 4.151.0, and v4 is now the default. Keeping a version switch is what made that a five-minute answer instead of an archaeology project. |
 | `SKCanvasElement` ownership | The original DESIGN.md attributed `SKCanvasElement` to SkiaSharp; it's in `Uno.WinUI.Graphics2DSK`. Easy to confirm via `dotnet-ildasm`-style assembly inspection, painful to get wrong. |
 | JPEG decode via `SKCodec.GetPixels` | Asking for arbitrary scaled dimensions silently fails on JPEG (only 1/N integer scales supported). Decode native, downscale via canvas. |
 | Focus-bug class | Clearing transient state (FocusedItemId) before a transition starts breaks any consumer that reads it during the transition. Defer the clear until the transition completes. |

@@ -113,8 +113,16 @@ public sealed class WireframeTile : ILiveTile
         // Bucket edges into N depth bands. Each band gets one path + one paint,
         // so a 200-edge shape draws in ~8 GPU calls instead of 200.
         const int Buckets = 8;
+#if SKIA_V4
+        // SKPathBuilder is v4-only, and it's what v4 wants instead of mutating an
+        // SKPath in place. Accumulate per bucket, then snapshot into the SKPath[]
+        // the draw loop below expects — identical geometry either way.
+        var builders = new SKPathBuilder[Buckets];
+        for (int i = 0; i < Buckets; i++) builders[i] = new SKPathBuilder();
+#else
         var paths = new SKPath[Buckets];
         for (int i = 0; i < Buckets; i++) paths[i] = new SKPath();
+#endif
 
         for (int oi = 0; oi < order.Length; oi++)
         {
@@ -123,9 +131,23 @@ public sealed class WireframeTile : ILiveTile
             float depth01 = Math.Clamp((midZ + 1.5f) / 3.0f, 0f, 1f);
             int bucket = Math.Min(Buckets - 1, (int)(depth01 * Buckets));
 
+#if SKIA_V4
+            builders[bucket].MoveTo(screen[a]);
+            builders[bucket].LineTo(screen[b]);
+#else
             paths[bucket].MoveTo(screen[a]);
             paths[bucket].LineTo(screen[b]);
+#endif
         }
+
+#if SKIA_V4
+        var paths = new SKPath[Buckets];
+        for (int i = 0; i < Buckets; i++)
+        {
+            paths[i] = builders[i].Snapshot();
+            builders[i].Dispose();
+        }
+#endif
 
         // One paint reused across all buckets — mutate Color/StrokeWidth per draw.
         using var paint = new SKPaint

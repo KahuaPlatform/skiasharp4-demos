@@ -145,7 +145,15 @@ public sealed class FolderSource : IImageSource
 
                 ApplyEncodedOrigin(surface.Canvas, origin, outW, outH);
                 using (var srcImg = SKImage.FromBitmap(scaled))
-                    surface.Canvas.DrawImage(srcImg, 0, 0);
+                {
+                    // 1:1 draw of the already-downscaled bitmap into the
+                    // orientation-corrected surface. Explicit sampling because v4
+                    // obsoletes the paint-carrying overload; the type is present
+                    // in 3.119.4 too, so this needs no version gate.
+                    surface.Canvas.DrawImage(
+                        srcImg, 0, 0,
+                        new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None));
+                }
 
                 return new GalleryItem(id, caption, surface.Snapshot(), palette);
             }

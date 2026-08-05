@@ -9,10 +9,11 @@ namespace UnoGallery.Effects;
 /// Animated ambient background. Two implementations:
 ///
 ///  - <b>SKSL plasma</b> — animated curl-noise tinted by the focused tile's
-///    accent palette. Used when <see cref="ShaderLibrary.AmbientPlasma"/> is
-///    available (currently SkiaSharp 3.x). This is the intended look.
-///  - <b>Dual radial gradient</b> — fallback used when the SKSL runtime-effect
-///    path is broken (SkiaSharp 4.147-preview AVs in
+///    accent palette. Used whenever <see cref="ShaderLibrary.AmbientPlasma"/>
+///    compiled, which is the normal case on both SkiaSharp 3.119.4 and 4.151.0.
+///    This is the intended look.
+///  - <b>Dual radial gradient</b> — fallback for when the SKSL runtime-effect
+///    path is unavailable (it was on SkiaSharp 4.147-preview, which AV'd in
 ///    <c>SKRuntimeEffectUniforms..ctor</c>). Two counter-orbiting tinted
 ///    glows over a near-black base. Reads as plasma-adjacent at a glance.
 /// </summary>
@@ -38,9 +39,6 @@ public sealed class BackgroundPass
 
     static void DrawPlasma(SKCanvas canvas, SKSize size, float t, SKColor accent, SKRuntimeEffect effect, float pulse)
     {
-        // SKRuntimeEffectUniforms is the v3 path — works fine; the AV the
-        // workaround was originally for only happens on v4 preview, and
-        // ShaderLibrary won't have handed us a non-null effect there.
         // iIntensity is bumped by the audio beat pulse — peaks at 1.7x on a
         // kick, decays smoothly back to 1.0.
         float intensity = 1.0f + pulse * 0.7f;

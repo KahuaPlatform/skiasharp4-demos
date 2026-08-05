@@ -167,7 +167,11 @@ public sealed class CurlNoiseTile : ILiveTile
         }
 
         using var img = SKImage.FromBitmap(_canvas);
-        canvas.DrawImage(img, dest);
+        // The work bitmap is allocated at ceil(dest) above, so this is a ~1:1
+        // blit; Linear only matters for the sub-pixel offset. SKSamplingOptions
+        // exists on both SkiaSharp 3.119.4 and 4.x, so no version gate needed —
+        // the paint/FilterQuality overload is the one v4 obsoletes.
+        canvas.DrawImage(img, dest, new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None));
     }
 
     // 2D value noise with bilinear interpolation, slowly evolving in z.

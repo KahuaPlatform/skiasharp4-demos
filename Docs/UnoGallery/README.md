@@ -31,12 +31,13 @@ What actually shipped diverged from the original plan in interesting ways:
   bound uniforms on first frame. Diagnosed mid-session, worked around by
   building a multi-version build property (`SkiaSharpVersion`) — default
   v3.119.4 stable, opt-in 4.x — with conditional pin block and a
-  `SKIA_V4` compile symbol. Five of the six SKSL effects only compile-and-bind
-  on v3; one (the zero-uniforms colour-filter "ToneGrade") works on both.
-  **The opt-in now targets 4.151.0 (SkiaSharp 4 stable), where this crash has
-  not been re-tested** — the `SKIA_V4` gates still disable the uniforms path, so
-  the v4 build simply never exercises it. See the note in the root
-  [README](../../README.md#status-on-41510-unverified).
+  `SKIA_V4` compile symbol. Five of the six SKSL effects only compiled-and-bound
+  on v3; one (the zero-uniforms colour-filter "ToneGrade") worked on both.
+  **Fixed in 4.151.0 (SkiaSharp 4 stable): the gate is gone and v4 is now the
+  default**, with all six effects live. A useful negative result along the way —
+  a bare-SkiaSharp console harness could *not* reproduce the AV even on the
+  preview that crashes, so only running it in the Uno host settled it. See
+  [SkiaSharp 3 vs 4 in UnoGallery](../../README.md#skiasharp-3-vs-4-in-unogallery).
 - Real photos via folder picker hit a JPEG decoder quirk: `SKCodec.GetPixels`
   with arbitrary target dimensions silently fails on JPEG (only 1/N integer
   scales supported). Found by an "is there any reason .jpg files don't open?"
@@ -185,12 +186,15 @@ sequence diagram.
 
 ### SkiaSharp version strategy
 
-The project defaults to **SkiaSharp 3.119.4 stable**. To opt into the 4.x
-line (now stable as of 4.151.0):
+The project defaults to **SkiaSharp 4.151.0** (the stable v4 line). To build
+against the older v3 line instead:
 
 ```bash
-dotnet build -p:SkiaSharpVersion=4.151.0
+dotnet build -p:SkiaSharpVersion=3.119.4
 ```
+
+Both lines build and run with the full six-effect SKSL pipeline. The switch is
+kept so this demo can A/B the two versions, not because either is broken.
 
 Mechanics:
 
@@ -265,11 +269,11 @@ Prereqs: .NET 10 SDK, Uno Platform workloads (`dotnet workload install uno`),
 Visual Studio 2022 17.12+ or VS Code with C# Dev Kit.
 
 ```bash
-# default: SkiaSharp 3.119.4 stable
+# default: SkiaSharp 4.151.0 stable
 dotnet build Source/UnoGallery/UnoGallery.sln -f net10.0-desktop -c Debug
 
-# opt in to SkiaSharp 4.151.0 stable (will lose uniforms-bearing SKSL effects)
-dotnet build Source/UnoGallery/UnoGallery.sln -p:SkiaSharpVersion=4.151.0
+# build against the older SkiaSharp 3 line instead
+dotnet build Source/UnoGallery/UnoGallery.sln -p:SkiaSharpVersion=3.119.4
 ```
 
 Run from VS or VS Code with the bundled `.run` profile, or:
@@ -318,7 +322,7 @@ out of scope for this session's perf and feature work.
 - **No HEIF, no RAW.** Same reason.
 - **Microphone is Windows-only.** NAudio is gated to `net10.0-desktop`. The `FakeAudioSource` synth fallback works on every TFM.
 - **GPU monitor is Windows-only.** Uses `PerformanceCounter` for the "GPU Engine \ Utilization Percentage" category. On other platforms the trace flatlines at zero.
-- **A SkiaSharp 4 build loses 5 of 6 SKSL effects.** When built with `-p:SkiaSharpVersion=4.x`, only the zero-uniforms `ToneGrade` colour filter compiles-and-binds. Ambient plasma, chromatic aberration, hover glow, dissolve, iris all fall back to non-SKSL primitives. This is the `SKIA_V4` gate doing its job, not a fresh measurement — the gate was added for the 4.147 preview AV and has not been revisited on 4.151.0.
+- **`SKPathBuilder` is v4-only.** Verified absent from 3.119.4, so `WireframeTile`, `MandalaTile`, and `ProceduralSampleSource` keep an `#if SKIA_V4` path-construction split. (`SKSamplingOptions` is on both lines and needs no gate.) The old "a SkiaSharp 4 build loses 5 of 6 SKSL effects" limitation is **gone** — that was the 4.147-preview AV, fixed in 4.151.0.
 
 ### Co-authorship
 

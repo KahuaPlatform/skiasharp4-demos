@@ -5,13 +5,17 @@ namespace UnoGallery.Shaders;
 
 /// <summary>
 /// Loads SKSL sources from embedded resources and compiles them into runtime
-/// effects. Effects with uniforms are loaded only on SkiaSharp 3 — the v4.147
-/// preview AVs inside <c>SKRuntimeEffectUniforms..ctor</c> on first use, so on
-/// v4 the relevant getters return null and callers fall back to non-SKSL
-/// Skia primitives.
+/// effects. Every effect loads on both SkiaSharp 3.119.4 and SkiaSharp 4.151.0.
 ///
-/// <see cref="ToneGrade"/> uses the zero-uniforms / parameterless
-/// <c>ToColorFilter()</c> path and works on both versions.
+/// History: the uniforms-bearing effects used to be gated behind
+/// <c>!SKIA_V4</c> because SkiaSharp <b>4.147.0-preview.3.1</b> AV'd inside
+/// native <c>sk_runtimeeffect_get_uniform_byte_size</c> on the first
+/// <c>SKRuntimeEffectUniforms</c> construction. That gate is gone: verified on
+/// 4.151.0 (SkiaSharp 4 stable) that all six compile, bind uniforms and child
+/// shaders, and render in the Uno host. Callers still null-check, so a future
+/// regression degrades to the non-SKSL fallbacks rather than crashing.
+///
+/// If you ever pin an older 4.14x preview again, expect the AV back.
 /// </summary>
 public sealed class ShaderLibrary
 {
@@ -19,57 +23,48 @@ public sealed class ShaderLibrary
     public static ShaderLibrary Instance => _instance.Value;
 
     /// <summary>
-    /// Cinematic tone-grade color filter (split-tone + contrast). Works on
-    /// both SkiaSharp 3 and 4.147-preview because it has no uniforms and
-    /// goes through the parameterless <see cref="SKRuntimeEffect.ToColorFilter()"/>.
+    /// Cinematic tone-grade color filter (split-tone + contrast). Has no
+    /// uniforms and goes through the parameterless
+    /// <see cref="SKRuntimeEffect.ToColorFilter()"/>, which is why this one
+    /// survived even the 4.147-preview uniform bug.
     /// </summary>
     public SKColorFilter? ToneGrade { get; }
 
     /// <summary>
     /// Animated plasma background shader (curl-noise + radial fall-off, tinted
-    /// by an accent uniform). Null on SkiaSharp 4.147-preview because the
-    /// runtime-effect uniforms path AVs in native; callers should use the
-    /// non-SKSL gradient fallback in that case.
+    /// by an accent uniform). Null only if compilation fails, in which case
+    /// callers use the non-SKSL gradient fallback.
     /// </summary>
     public SKRuntimeEffect? AmbientPlasma { get; }
 
     /// <summary>
     /// Radial chromatic aberration post-pass shader. Takes a child shader
-    /// (the scene to filter) and an amount uniform. Null on v4.147-preview.
+    /// (the scene to filter) and an amount uniform.
     /// </summary>
     public SKRuntimeEffect? ChromaShift { get; }
 
-    /// <summary>Pulsing radial halo to lift the hovered tile. Null on v4.147-preview.</summary>
+    /// <summary>Pulsing radial halo to lift the hovered tile.</summary>
     public SKRuntimeEffect? HoverGlow { get; }
 
-    /// <summary>Noise-threshold dissolve between two scenes. Null on v4.147-preview.</summary>
+    /// <summary>Noise-threshold dissolve between two scenes.</summary>
     public SKRuntimeEffect? Dissolve { get; }
 
-    /// <summary>Circular iris reveal between two scenes. Null on v4.147-preview.</summary>
+    /// <summary>Circular iris reveal between two scenes.</summary>
     public SKRuntimeEffect? Iris { get; }
 
-    /// <summary>Per-tile plasma shader (sine field + polar spiral). Null on v4.147-preview.</summary>
+    /// <summary>Per-tile plasma shader (sine field + polar spiral).</summary>
     public SKRuntimeEffect? PlasmaTile { get; }
 
     ShaderLibrary()
     {
         ToneGrade = TryCompileColorFilter("ToneGrade.sksl");
 
-#if SKIA_V4
-        AmbientPlasma = null; // v4.147-preview: uniforms path crashes
-        ChromaShift = null;
-        HoverGlow = null;
-        Dissolve = null;
-        Iris = null;
-        PlasmaTile = null;
-#else
         AmbientPlasma = TryCompileShader("Ambient.Plasma.sksl");
         ChromaShift = TryCompileShader("ChromaShift.sksl");
         HoverGlow = TryCompileShader("HoverGlow.sksl");
         Dissolve = TryCompileShader("Dissolve.sksl");
         Iris = TryCompileShader("Iris.sksl");
         PlasmaTile = TryCompileShader("PlasmaTile.sksl");
-#endif
     }
 
     static SKColorFilter? TryCompileColorFilter(string resourceName)

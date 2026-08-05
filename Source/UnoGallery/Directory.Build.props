@@ -5,26 +5,24 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
 
     <!--
-      SkiaSharp version. Default: 3.119.4 (stable, what Uno.Sdk would resolve
-      otherwise). Override at the command line to build against SkiaSharp 4:
+      SkiaSharp version. Default: 4.151.0 (SkiaSharp 4 stable). Build against the
+      v3 line instead with:
 
-        dotnet build -p:SkiaSharpVersion=4.151.0
+        dotnet build -p:SkiaSharpVersion=3.119.4
 
       When the version begins with "4.", SKIA_V4 is defined so individual call
-      sites can opt into v4-only APIs (e.g. SKRuntimeShaderBuilder, the new
-      SceneGraph) behind `#if SKIA_V4` while keeping the v3 path intact.
+      sites can opt into v4-only APIs behind `#if SKIA_V4` while keeping a v3
+      path intact. The property exists to keep that A/B capability, which is the
+      point of this demo — not because either version is broken.
 
-      Why the default is still v3: on 4.147.0-preview.3.1, SKRuntimeShaderBuilder
-      and any uniforms path through SKRuntimeEffectUniforms..ctor AV'd in native
-      code. The parameterless ToColorFilter() route still works — that's what
-      powers Shaders/ToneGrade.sksl.
-
-      NOT re-measured on 4.151.0 (SkiaSharp 4 stable): the SKIA_V4 gates keep the
-      uniforms path out of the v4 build entirely, so a v4 build never exercises
-      it. Flipping those gates and doing a visual pass is what it would take to
-      find out. See DESIGN.md §2.2 for the full audit.
+      History: the default used to be 3.119.4 because SkiaSharp
+      4.147.0-preview.3.1 AV'd inside native sk_runtimeeffect_get_uniform_byte_size
+      on the first SKRuntimeEffectUniforms construction, which cost five of the
+      six SKSL effects. Re-tested on 4.151.0: all six compile, bind uniforms and
+      child shaders, and render in the Uno host, so the gate that disabled them
+      is gone and v4 is now the default. See DESIGN.md §2.2.
     -->
-    <SkiaSharpVersion Condition="'$(SkiaSharpVersion)' == ''">3.119.4</SkiaSharpVersion>
+    <SkiaSharpVersion Condition="'$(SkiaSharpVersion)' == ''">4.151.0</SkiaSharpVersion>
     <DefineConstants Condition="$(SkiaSharpVersion.StartsWith('4.'))">$(DefineConstants);SKIA_V4</DefineConstants>
 
     <!--
