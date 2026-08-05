@@ -4,7 +4,7 @@
 
     <OutputType>Exe</OutputType>
     <UnoSingleProject>true</UnoSingleProject>
-    <SkiaSharpVersion>4.147.0-preview.3.1</SkiaSharpVersion>
+    <SkiaSharpVersion>4.151.0</SkiaSharpVersion>
 
     <ApplicationTitle>Uno Skia Demos</ApplicationTitle>
     <ApplicationId>com.companyname.unoskialauncher</ApplicationId>

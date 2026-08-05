@@ -59,6 +59,6 @@ World coordinates are fixed at `672 × 744` for the maze (28×31 cells × 24px).
 ## Stack
 
 - Uno Platform (`SkiaRenderer` UnoFeature) + `Uno.WinUI.Graphics2DSK.SKCanvasElement`
-- SkiaSharp 4.147.0-preview.3.1
+- SkiaSharp 4.151.0
 - .NET 10 — `net10.0-desktop`, `net10.0-browserwasm`
 - NAudio 2.x for desktop audio (Windows-only; guarded by `HAS_NAUDIO`)

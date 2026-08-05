@@ -54,6 +54,6 @@ World coordinates are fixed at `720 × 720` square. The arena grid is `90 × 90`
 ## Stack
 
 - Uno Platform (`SkiaRenderer` UnoFeature) + `Uno.WinUI.Graphics2DSK.SKCanvasElement`
-- SkiaSharp 4.147.0-preview.3.1
+- SkiaSharp 4.151.0
 - .NET 10 — `net10.0-desktop`, `net10.0-browserwasm`
 - NAudio 2.x for desktop audio (Windows-only; guarded by `HAS_NAUDIO`)

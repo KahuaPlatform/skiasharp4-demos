@@ -10,8 +10,8 @@ The interesting bits are all in two files: [Renderer.cs](../../Source/Pohaku/Poh
 
 ### Project layout
 
-- [global.json](../../Source/Pohaku/global.json) pins `Uno.Sdk` to `6.7.0-dev.64`.
-- [Pohaku.csproj](../../Source/Pohaku/Pohaku/Pohaku.csproj) is a `Uno.Sdk` single-project targeting `net10.0-browserwasm;net10.0-desktop` with `<UnoFeatures>SkiaRenderer</UnoFeatures>`. The `<SkiaSharpVersion>4.147.0-preview.3.1</SkiaSharpVersion>` property overrides the Uno SDK's implicit SkiaSharp packages, pulling in SkiaSharp 4 across `SkiaSharp`, `SkiaSharp.Views.Uno.WinUI`, `SkiaSharp.Skottie`, and all native-assets packages in one shot — no individual `PackageReference` needed.
+- [global.json](../../Source/Pohaku/global.json) pins `Uno.Sdk` to `6.7.0-dev.164`.
+- [Pohaku.csproj](../../Source/Pohaku/Pohaku/Pohaku.csproj) is a `Uno.Sdk` single-project targeting `net10.0-browserwasm;net10.0-desktop` with `<UnoFeatures>SkiaRenderer</UnoFeatures>`. The `<SkiaSharpVersion>4.151.0</SkiaSharpVersion>` property overrides the Uno SDK's implicit SkiaSharp packages, pulling in SkiaSharp 4 across `SkiaSharp`, `SkiaSharp.Views.Uno.WinUI`, `SkiaSharp.Skottie`, and all native-assets packages in one shot — no individual `PackageReference` needed.
 - Game state lives in [Game/](../../Source/Pohaku/Pohaku/Game/): `Entities.cs` (ship/asteroid/saucer/bullet/particle data), `GameWorld.cs` (physics, spawning, scoring, mode state machine), `Renderer.cs` (all drawing).
 
 ### Game loop

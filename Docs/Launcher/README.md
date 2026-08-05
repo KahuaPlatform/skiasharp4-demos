@@ -116,6 +116,6 @@ World coordinates are fixed at `1280 × 720`. The grid lays out 4 columns × `ce
 ## Stack
 
 - Uno Platform (`SkiaRenderer` UnoFeature) + `Uno.WinUI.Graphics2DSK.SKCanvasElement`
-- SkiaSharp 4.147.0-preview.3.1
+- SkiaSharp 4.151.0
 - .NET 10 — `net10.0-desktop`, `net10.0-browserwasm`
 - No audio (launcher is silent on purpose — clicking a tile hands off to the game's own audio)

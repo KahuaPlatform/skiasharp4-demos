@@ -61,7 +61,7 @@ A `Common.csproj` ProjectReference would be more conventional but loses the thin
 
 | Concern | Source-include outcome | ProjectReference outcome |
 |---|---|---|
-| Per-demo SkiaSharp version pin | Each demo's compile of chassis uses that demo's SkiaSharp version. Pohaku on Skia 4 preview and KahuaNetwork on Skia 3 stable can both consume chassis pieces (if applicable) without conflict. | Common.csproj pins ONE SkiaSharp version, forcing every consumer onto it. |
+| Per-demo SkiaSharp version pin | Each demo's compile of chassis uses that demo's SkiaSharp version. Pohaku on Skia 4.151.0 and KahuaNetwork on Skia 3.119.4 can both consume chassis pieces (if applicable) without conflict. | Common.csproj pins ONE SkiaSharp version, forcing every consumer onto it. |
 | `#if HAS_NAUDIO` / `#if __WASM__` | Chassis files participate in each demo's conditional-compilation context. `AudioEngineBase.cs` references NAudio inside `#if HAS_NAUDIO` and the conditional matches the consumer's DefineConstants. | Common.csproj defines its own constants — every consumer that needs `HAS_NAUDIO` for chassis behavior has to match exactly, and you can't have one consumer with NAudio and another without. |
 | MSBuild SDK pin | Each demo can pin its own `Uno.Sdk` version (`global.json` per demo). | Common.csproj also pins an SDK — version skew breaks builds. |
 | Per-demo isolation | Each demo remains a fully self-contained unit; deleting Source/Common/ only breaks chassis-using demos. | Common.csproj becomes a maintenance dependency every demo must track. |

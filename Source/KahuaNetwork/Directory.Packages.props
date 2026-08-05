@@ -10,6 +10,11 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageVersion Include="SkiaSharp" Version="3.119.4" />
-    <PackageVersion Include="Uno.WinUI.Graphics2DSK" Version="6.7.0-dev.215" />
+    <!--
+      Must track the Uno.Sdk's $(UnoVersion): SDK 6.7.0-dev.164 resolves the
+      Uno.WinUI runtime packages at 6.7.0-dev.938, and Graphics2DSK has to match
+      or it binds against a different Uno.WinUI build.
+    -->
+    <PackageVersion Include="Uno.WinUI.Graphics2DSK" Version="6.7.0-dev.938" />
   </ItemGroup>
 </Project>

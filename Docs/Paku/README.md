@@ -12,7 +12,7 @@ What makes Paku different from the other arcade demos in this repo: it does **no
 
 ### Project layout
 
-- [Paku.csproj](../../Source/Paku/Paku/Paku.csproj) is a `Uno.Sdk` single-project targeting `net10.0-browserwasm;net10.0-desktop` with `<UnoFeatures>SkiaRenderer</UnoFeatures>` and `<SkiaSharpVersion>4.147.0-preview.3.1</SkiaSharpVersion>`.
+- [Paku.csproj](../../Source/Paku/Paku/Paku.csproj) is a `Uno.Sdk` single-project targeting `net10.0-browserwasm;net10.0-desktop` with `<UnoFeatures>SkiaRenderer</UnoFeatures>` and `<SkiaSharpVersion>4.151.0</SkiaSharpVersion>`.
 - Game state lives in [Game/](../../Source/Paku/Paku/Game/): [`Entities.cs`](../../Source/Paku/Paku/Game/Entities.cs) (`Cell`, `Spore`, `Particle` data), [`GameWorld.cs`](../../Source/Paku/Paku/Game/GameWorld.cs) (simulation, AI, absorption, scoring, camera, mode state machine), [`Renderer.cs`](../../Source/Paku/Paku/Game/Renderer.cs) (all drawing), [`AudioEngine.cs`](../../Source/Paku/Paku/Game/AudioEngine.cs) (procedural voices).
 - The shared neon chassis (`HsvColor`, `Marquee`, `HudText`, `HighScoreStore`, `AudioEngineBase`, `Vec2`) is source-included from [`Source/Common/`](../../Source/Common/) via the csproj `<Compile>` glob. Paku uses these pieces but **skips** `AmbientStarBackdrop`/`NeonBackground`/`PlayfieldBorder` — its plasma backdrop and world grid replace them.
 

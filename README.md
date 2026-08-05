@@ -63,7 +63,7 @@ UnoSkiaDemos/
 ## Prerequisites
 
 - **.NET 10 SDK** — all demos target `net10.0`. `dotnet --list-sdks` should show `10.0.x`.
-- **Uno Platform workloads** — `dotnet workload install uno` once per machine. The Uno SDK version (`Uno.Sdk 6.7.0-dev.64`) is pinned in each demo's `global.json`.
+- **Uno Platform workloads** — `dotnet workload install uno` once per machine. The Uno SDK version (`Uno.Sdk 6.7.0-dev.164`) is pinned in each demo's `global.json`.
 - **Visual Studio 2022 17.12+ or VS Code with C# Dev Kit** — both work; demos build cleanly from the CLI without an IDE.
 - **For wasm builds**: emscripten is downloaded automatically by the Uno SDK on first `net10.0-browserwasm` build (`~/.uno/emsdk/`). First-time builds take a few minutes; subsequent builds are fast.
 - **Git + Git LFS** — `.gitattributes` LFS-tracks binary asset types. Run `git lfs install` once per machine after cloning.
@@ -134,32 +134,41 @@ The fastest way is to copy an existing demo as a starting point (Pohaku if you w
 
 The demos deliberately use different versions and feature sets — that's the point of the repo. Don't try to unify SkiaSharp versions or Uno features across them.
 
-- UnoGallery uses a `$(SkiaSharpVersion)`-gated build (defaults to SkiaSharp 3.119.4 stable; pass `-p:SkiaSharpVersion=4.147.0-preview.3.1` to test the v4 preview — but uniforms-bearing SKSL crashes on that preview; see [SkiaSharp 4 limitations](#skiasharp-4-limitations) below)
-- Pohaku, HokuLele, Lua, Mahina, Heiau, Kanapi, Alaloa, Hahai, Paku, Kiai, Koa, and Launcher pin SkiaSharp 4.147.0-preview.3.1
+- UnoGallery uses a `$(SkiaSharpVersion)`-gated build (defaults to SkiaSharp 3.119.4 stable; pass `-p:SkiaSharpVersion=4.151.0` to build the v4 path — but its uniforms-bearing SKSL effects stay disabled there; see [SkiaSharp 4 limitations](#skiasharp-4-limitations) below)
+- Pohaku, HokuLele, Lua, Mahina, Heiau, Kanapi, Alaloa, Hahai, Paku, Kiai, Koa, and Launcher pin SkiaSharp 4.151.0
 - KahuaNetwork uses SkiaSharp 3.119.4 + `Uno.WinUI.Graphics2DSK`
 - Uno3dViewer adds Silk.NET (OpenGL + Assimp) and uses `<UnoFeatures>...GLCanvas</UnoFeatures>`
 
-All fifteen share `Uno.Sdk 6.7.0-dev.64` as the MSBuild SDK. Eleven of them (HokuLele, Lua, Mahina, Heiau, Kanapi, Alaloa, Hahai, Paku, Kiai, Koa, Launcher) share a neon-game chassis from `Source/Common/` (see [Source/Common](Source/Common/)).
+All fifteen share `Uno.Sdk 6.7.0-dev.164` as the MSBuild SDK. Eleven of them (HokuLele, Lua, Mahina, Heiau, Kanapi, Alaloa, Hahai, Paku, Kiai, Koa, Launcher) share a neon-game chassis from `Source/Common/` (see [Source/Common](Source/Common/)).
 
 ## SkiaSharp 4 limitations
 
-Most demos run **SkiaSharp 4.147.0-preview.3.1** (the arcade family + Launcher). **UnoGallery** is the exception that documents *why* SkiaSharp 4 isn't universal yet: its programmable **SKSL runtime-effect** pipeline crashes on the v4 preview, so it defaults to **SkiaSharp 3.119.4** and gates the v4 path behind a build property.
+Most demos run **SkiaSharp 4.151.0** — as of that release SkiaSharp 4 is a **stable** line, not a preview. **UnoGallery** is still the exception, and it documents the one thing that kept SkiaSharp 4 from being universal here: its programmable **SKSL runtime-effect** pipeline hit a native crash, so it defaults to **SkiaSharp 3.119.4** and gates the v4 path behind a build property.
 
 ### The crash
 
-Any uniforms-bearing SKSL shader — `SKRuntimeShaderBuilder`, or `SKRuntimeEffect.CreateShader(...)` followed by `ToShader(uniforms, children)` — throws an **`AccessViolation` inside native `sk_runtimeeffect_get_uniform_byte_size` on the first frame**. It builds cleanly; it dies at runtime the moment a uniform block is constructed.
+Measured on **SkiaSharp 4.147.0-preview.3.1**: any uniforms-bearing SKSL shader — `SKRuntimeShaderBuilder`, or `SKRuntimeEffect.CreateShader(...)` followed by `ToShader(uniforms, children)` — threw an **`AccessViolation` inside native `sk_runtimeeffect_get_uniform_byte_size` on the first frame**. It built cleanly; it died at runtime the moment a uniform block was constructed.
 
-| SKSL path | v3 (3.119.4) | v4 (4.147.0-preview.3.1) |
+| SKSL path | v3 (3.119.4) | v4.147.0-preview.3.1 |
 |---|---|---|
 | Uniforms-bearing shader (`ToShader(uniforms, …)`) | ✅ | ❌ AccessViolation |
 | Parameterless color filter (`ToColorFilter()`) | ✅ | ✅ |
 
-The parameterless `ToColorFilter()` route survives — which is why UnoGallery's tone-grade pass works on both versions while its six uniform-driven SKSL effects (plasma, dissolve, iris, chroma-shift, hover-glow, …) are v3-only.
+The parameterless `ToColorFilter()` route survived — which is why UnoGallery's tone-grade pass works on both versions while its six uniform-driven SKSL effects (plasma, dissolve, iris, chroma-shift, hover-glow, …) are v3-only.
+
+### Status on 4.151.0: unverified
+
+**The crash has not been re-tested on 4.151.0 inside the Uno host, so treat the table above as a 4.147-preview measurement, not a current one.**
+
+An isolated console probe — bare `SkiaSharp` + `SkiaSharp.NativeAssets.Win32`, no Uno, CPU raster surface — exercised `SKRuntimeEffectUniforms`, `ToShader(uniforms)`, and `SKRuntimeShaderBuilder.Build()` and **passed on both 4.147.0-preview.3.1 and 4.151.0**. Because the control did not reproduce, that probe says nothing about whether 4.151.0 fixes anything; what it does show is that the trigger is not the bare managed API. It needs something the console probe lacks — most likely Uno's GPU-backed surface, or the specific uniform layouts in UnoGallery's shaders.
+
+Settling it means flipping the `#if SKIA_V4` gates in `Shaders/ShaderLibrary.cs` and `Data/ProceduralSampleSource.cs`, building UnoGallery at `-p:SkiaSharpVersion=4.151.0`, and running it. That's a source change plus a manual visual pass, so it hasn't been done.
 
 ### How UnoGallery handles it
 
-- Defaults to **SkiaSharp 3.119.4 stable**; opt into the preview with `dotnet build -p:SkiaSharpVersion=4.147.0-preview.3.1`.
+- Defaults to **SkiaSharp 3.119.4 stable**; opt into v4 with `dotnet build -p:SkiaSharpVersion=4.151.0`.
 - `Directory.Build.props` defines an `SKIA_V4` compile constant when the version starts with `4.`; uniforms-bearing shaders load only when `!SKIA_V4`, and consumers fall back to non-SKSL primitives (the ambient plasma becomes a dual radial gradient, etc.).
-- The v4-only APIs that *would* justify the pin (`SKPathBuilder`, `SKSamplingOptions`, the new `DrawImage` overloads) are already available in SkiaSharp 3.116+, so there's no reason to force the preview yet.
+- When `SkiaSharpVersion` names a 4.x build, `Directory.Packages.props` force-pins the transitive `SkiaSharp.*` and `HarfBuzzSharp.*` packages. **`HarfBuzzSharp` tracks a version line of its own** — SkiaSharp 4.151.0 declares HarfBuzzSharp **14.2.1**, where the 4.147 previews wanted 8.3.1.6-preview.3.1. Read the target `SkiaSharp.HarfBuzz` nuspec when changing versions; the numbers are not comparable across the two lines.
+- The v4-only APIs that *would* justify moving UnoGallery (`SKPathBuilder`, `SKSamplingOptions`, the new `DrawImage` overloads) are already available in SkiaSharp 3.116+, so there is still no forcing reason to switch its default.
 
 Full audit: [Docs/UnoGallery/DESIGN.md](Docs/UnoGallery/DESIGN.md) §2.2–2.3.

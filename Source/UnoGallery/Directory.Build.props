@@ -6,18 +6,23 @@
 
     <!--
       SkiaSharp version. Default: 3.119.4 (stable, what Uno.Sdk would resolve
-      otherwise). Override at the command line to test newer previews:
+      otherwise). Override at the command line to build against SkiaSharp 4:
 
-        dotnet build -p:SkiaSharpVersion=4.147.0-preview.3.1
+        dotnet build -p:SkiaSharpVersion=4.151.0
 
       When the version begins with "4.", SKIA_V4 is defined so individual call
       sites can opt into v4-only APIs (e.g. SKRuntimeShaderBuilder, the new
       SceneGraph) behind `#if SKIA_V4` while keeping the v3 path intact.
 
-      Caveat for 4.147.0-preview.3.1: SKRuntimeShaderBuilder and any uniforms
-      path through SKRuntimeEffectUniforms..ctor AVs in native code. The
-      parameterless ToColorFilter() route still works — that's what powers
-      Shaders/ToneGrade.sksl. See DESIGN.md for the full audit.
+      Why the default is still v3: on 4.147.0-preview.3.1, SKRuntimeShaderBuilder
+      and any uniforms path through SKRuntimeEffectUniforms..ctor AV'd in native
+      code. The parameterless ToColorFilter() route still works — that's what
+      powers Shaders/ToneGrade.sksl.
+
+      NOT re-measured on 4.151.0 (SkiaSharp 4 stable): the SKIA_V4 gates keep the
+      uniforms path out of the v4 build entirely, so a v4 build never exercises
+      it. Flipping those gates and doing a visual pass is what it would take to
+      find out. See DESIGN.md §2.2 for the full audit.
     -->
     <SkiaSharpVersion Condition="'$(SkiaSharpVersion)' == ''">3.119.4</SkiaSharpVersion>
     <DefineConstants Condition="$(SkiaSharpVersion.StartsWith('4.'))">$(DefineConstants);SKIA_V4</DefineConstants>

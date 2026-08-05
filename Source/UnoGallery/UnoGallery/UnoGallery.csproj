@@ -19,7 +19,7 @@
 
     <!--
       SkiaSharp version is set in Directory.Build.props (defaults to 3.119.4).
-      Override with: dotnet build -p:SkiaSharpVersion=4.147.0-preview.3.1
+      Override with: dotnet build -p:SkiaSharpVersion=4.151.0
     -->
 
     <!-- Required for the procedural-image generators that write pixel buffers directly. -->

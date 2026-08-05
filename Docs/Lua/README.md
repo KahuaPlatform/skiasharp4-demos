@@ -62,6 +62,6 @@ The world coordinates are fixed at `720 × 1280` (portrait 9:16); the renderer l
 ## Stack
 
 - Uno Platform (`SkiaRenderer` UnoFeature) + `Uno.WinUI.Graphics2DSK.SKCanvasElement`
-- SkiaSharp 4.147.0-preview.3.1 (pinned via the `$(SkiaSharpVersion)` MSBuild property)
+- SkiaSharp 4.151.0 (pinned via the `$(SkiaSharpVersion)` MSBuild property)
 - .NET 10 — `net10.0-desktop`, `net10.0-browserwasm`
 - NAudio 2.x for desktop audio (Windows-only; guarded by `HAS_NAUDIO`)
