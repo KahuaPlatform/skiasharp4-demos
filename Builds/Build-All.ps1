@@ -20,6 +20,7 @@ $scripts = @(
     'Build-Paku.ps1',
     'Build-Kiai.ps1',
     'Build-Koa.ps1',
+    'Build-Eli.ps1',
     'Build-Launcher.ps1',
     'Build-Uno3dViewer.ps1'
 )

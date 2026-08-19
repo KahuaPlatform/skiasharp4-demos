@@ -1,0 +1,10 @@
+{
+  "background_color": "#ffffff",
+  "description": "Eli",
+  "display": "standalone",
+  "name": "Eli",
+  "short_name": "Eli",
+  "start_url": "/index.html",
+  "theme_color": "#ffffff",
+  "scope": "/"
+}

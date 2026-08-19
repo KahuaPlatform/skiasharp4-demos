@@ -19,6 +19,7 @@ A consolidated home for several [Uno Platform](https://platform.uno) + [SkiaShar
 | [Paku](Docs/Paku/README.md) | net10.0 (wasm / desktop) | Agar.io-style cell-absorption arena with plasma background, mass-ejection thrust, progressive AI hunters, zooming camera. | Working |
 | [Kiai](Docs/Kiai/DESIGN.md) | net10.0 (wasm / desktop) | Defender-style horizontally-wrapping shooter — patrol a toroidal world, gun down landers before they abduct humanoids, catch falling humanoids, ship-centred radar strip, smart bombs + hyperspace, attract mode. | Working |
 | [Koa](Docs/Koa/DESIGN.md) | net10.0 (wasm / desktop) | Gauntlet-style top-down dungeon crawl — 8-way wall-sliding movement, destructible generators spawning hordes, flow-field swarm AI, draining-health clock, food / potions / treasure, multi-level progression, attract mode. | Working |
+| [Eli](Docs/Eli/DESIGN.md) | net10.0 (wasm / desktop) | Dig-Dug-style tunnelling — carve your own passages through four strata of packed dirt, harpoon-and-pump the monsters until they burst, drop suspended boulders on them, dodge the ghost that phases through solid earth, attract mode. | Working |
 | [Launcher](Docs/Launcher/README.md) | net10.0 (wasm / desktop) | Unified neon catalog landing page — card grid of every demo with hover effects + click-to-navigate. Designed for a published static site where each game sits at `/games/<name>/`. | Working |
 | [Uno3dViewer](Source/Uno3dViewer/) | net10.0 (desktop only) | OpenGL 3D model viewer using Silk.NET + Assimp, rendered into Uno's `GLCanvasElement`. | Working |
 
@@ -48,6 +49,7 @@ UnoSkiaDemos/
 │   ├── Paku/
 │   ├── Kiai/
 │   ├── Koa/
+│   ├── Eli/
 │   ├── Launcher/
 │   └── Uno3dViewer/
 ├── Docs/                    Per-demo READMEs, design docs, screenshots
@@ -126,7 +128,7 @@ dotnet run --project Source/Pohaku/Pohaku/Pohaku.csproj -f net10.0-browserwasm
 1. Create `Source/<NewDemo>/<NewDemo>/<NewDemo>.csproj` plus `Directory.Build.props`, `Directory.Packages.props`, `global.json`, and `<NewDemo>.sln` in `Source/<NewDemo>/`. Don't add anything build-related at the repo root — that would cascade into the other demos' MSBuild trees and break their isolation.
 2. Add `Builds/Build-<NewDemo>.ps1` and `Builds/Run-<NewDemo>.ps1` following the existing pattern.
 3. Append the script name to the `$scripts` array in `Builds/Build-All.ps1`.
-4. Append the slug to the `$games` array in [`Builds/Publish-Site.ps1`](Builds/Publish-Site.ps1) so it gets bundled into the static site. **Don't** add an `Entry(...)` to [`Source/Launcher/Launcher/Game/GameCatalog.cs`](Source/Launcher/Launcher/Game/GameCatalog.cs) — extra cards broke the launcher's grid layout, so the catalog stays at its original eight entries and newer games (Paku, Kiai, Koa) ship standalone. See [Docs/Architecture/08-Chassis-Extensions.md](Docs/Architecture/08-Chassis-Extensions.md).
+4. Append the slug to the `$games` array in [`Builds/Publish-Site.ps1`](Builds/Publish-Site.ps1) so it gets bundled into the static site. **Don't** add an `Entry(...)` to [`Source/Launcher/Launcher/Game/GameCatalog.cs`](Source/Launcher/Launcher/Game/GameCatalog.cs) — extra cards broke the launcher's grid layout, so the catalog stays at its original eight entries and newer games (Paku, Kiai, Koa, Eli) ship standalone. See [Docs/Architecture/08-Chassis-Extensions.md](Docs/Architecture/08-Chassis-Extensions.md).
 5. Add `Docs/<NewDemo>/README.md`.
 
 The fastest way is to copy an existing demo as a starting point (Pohaku if you want vector+neon, UnoGallery if you want the full SKCanvasElement scene + effects pipeline).
@@ -136,11 +138,11 @@ The fastest way is to copy an existing demo as a starting point (Pohaku if you w
 The demos deliberately use different versions and feature sets — that's the point of the repo. Don't try to unify SkiaSharp versions or Uno features across them.
 
 - UnoGallery uses a `$(SkiaSharpVersion)`-gated build, now defaulting to SkiaSharp 4.151.0 with all six SKSL effects live; build the v3 line with `-p:SkiaSharpVersion=3.119.4` (see [SkiaSharp 3 vs 4 in UnoGallery](#skiasharp-3-vs-4-in-unogallery) below)
-- Pohaku, HokuLele, Lua, Mahina, Heiau, Kanapi, Alaloa, Hahai, Paku, Kiai, Koa, and Launcher pin SkiaSharp 4.151.0
+- Pohaku, HokuLele, Lua, Mahina, Heiau, Kanapi, Alaloa, Hahai, Paku, Kiai, Koa, Eli, and Launcher pin SkiaSharp 4.151.0
 - KahuaNetwork uses SkiaSharp 3.119.4 + `Uno.WinUI.Graphics2DSK` — the remaining SkiaSharp 3 demo
 - Uno3dViewer adds Silk.NET (OpenGL + Assimp) and uses `<UnoFeatures>...GLCanvas</UnoFeatures>`
 
-All fifteen share `Uno.Sdk 6.7.0-dev.164` as the MSBuild SDK. Eleven of them (HokuLele, Lua, Mahina, Heiau, Kanapi, Alaloa, Hahai, Paku, Kiai, Koa, Launcher) share a neon-game chassis from `Source/Common/` (see [Source/Common](Source/Common/)).
+All sixteen share `Uno.Sdk 6.7.0-dev.164` as the MSBuild SDK. Twelve of them (HokuLele, Lua, Mahina, Heiau, Kanapi, Alaloa, Hahai, Paku, Kiai, Koa, Eli, Launcher) share a neon-game chassis from `Source/Common/` (see [Source/Common](Source/Common/)).
 
 ## SkiaSharp 3 vs 4 in UnoGallery
 

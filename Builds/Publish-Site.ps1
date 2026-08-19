@@ -39,6 +39,7 @@ $games = @(
     @{ Name = 'Paku';     Slug = 'paku'     }
     @{ Name = 'Kiai';     Slug = 'kiai'     }
     @{ Name = 'Koa';      Slug = 'koa'      }
+    @{ Name = 'Eli';      Slug = 'eli'      }
 )
 
 if (Test-Path $OutputDir) {
