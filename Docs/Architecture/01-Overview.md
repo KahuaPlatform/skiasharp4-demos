@@ -107,6 +107,7 @@ Builds/
 ├── Build-All.ps1               ← aggregator (loops the per-demo Build- scripts)
 ├── Build-<Demo>.ps1            ← one per demo
 ├── Run-<Demo>.ps1              ← one per demo
+├── Capture-Demo.ps1            ← screenshots a running demo's window (desktop only)
 └── Publish-Site.ps1            ← bundles launcher + all wasm games into publish/site/
 ```
 

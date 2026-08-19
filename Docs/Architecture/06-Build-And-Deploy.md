@@ -9,6 +9,7 @@ Builds/
 ├── Build-All.ps1                  ← aggregator
 ├── Build-<Demo>.ps1               ← per-demo build wrapper
 ├── Run-<Demo>.ps1                 ← per-demo run wrapper
+├── Capture-Demo.ps1               ← window screenshot (desktop only)
 └── Publish-Site.ps1               ← wasm site bundler
 ```
 
@@ -65,6 +66,31 @@ flowchart LR
 ```
 
 Loops the `$scripts` array and invokes each `Build-<Demo>.ps1`. Tracks failures and prints a summary at the end. `Build-All -Wasm` automatically skips Uno3dViewer (it has no browserwasm TFM) — the skip is logged for visibility.
+
+## Capturing a screenshot
+
+Every demo is a Skia canvas, so "did that change actually render?" is the question that matters most —
+and the one a green build says nothing about. `Capture-Demo.ps1` answers it without a human watching
+the window:
+
+```powershell
+.\Builds\Capture-Demo.ps1 -Demo Eli                              # capture what's already running
+.\Builds\Capture-Demo.ps1 -Demo Eli -Launch -DelaySeconds 16     # start it, wait for attract mode
+.\Builds\Capture-Demo.ps1 -Demo Hahai -Out shots\hahai.png       # explicit output path
+```
+
+Output defaults to `publish/screenshots/<Demo>-<timestamp>.png`; `/publish/` is gitignored, so
+captures never land in the working tree by accident.
+
+The capture goes through Win32 `PrintWindow` with `PW_RENDERFULLCONTENT`, which asks the window to
+render its own surface into a bitmap. That matters: the obvious alternative,
+`Graphics.CopyFromScreen`, grabs the *screen region* the window occupies, so anything overlapping the
+demo — an editor, a terminal — ends up in the shot. `PrintWindow` comes back blank on some
+GPU-composited windows, so the script samples a grid of pixels and falls back to `CopyFromScreen` with
+a warning rather than silently saving a black rectangle.
+
+Desktop only — there is no window to capture on browserwasm. Exits 1 if no matching demo window is
+running.
 
 ## The static-site pipeline
 
@@ -189,4 +215,5 @@ Two things worth noting for production:
 | New demo | Add `Builds/Build-<New>.ps1` + `Builds/Run-<New>.ps1`; append script name to `Build-All.ps1` `$scripts`. |
 | New wasm-publishable demo (game) | Also append the slug to `Publish-Site.ps1` `$games`. |
 | New shared chassis file | Nothing — `<Compile Include="..\..\Common\**\*.cs"/>` glob picks it up automatically next build. |
+| Screenshotting a demo | Nothing — `Capture-Demo.ps1` resolves the demo by name; no per-demo entry needed. |
 | New per-demo audio voice | Csproj already has `<EmbeddedResource Include="...audio.js"/>` — nothing to change for the build. |
