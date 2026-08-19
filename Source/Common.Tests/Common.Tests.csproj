@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>Arcade.Common.Tests</RootNamespace>
+    <!-- Plain net10.0, not one of the Uno TFMs: the chassis pieces under test are
+         pure algorithms plus SkiaSharp types, with no UI dependency, so the tests
+         run under a normal test host with no Uno SDK involved. -->
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="MSTest.TestFramework" Version="3.6.4" />
+    <PackageReference Include="MSTest.TestAdapter" Version="3.6.4" />
+    <!-- Matches the pin every arcade demo uses. ArcadeConventions in Arcade.Tests
+         fails if a demo ever diverges from it. -->
+    <PackageReference Include="SkiaSharp" Version="4.151.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Source-include the chassis exactly as the demos do, so these tests exercise
+         the same compilation the games get rather than a separate build of it.
+         AmbientStarBackdrop is the one exclusion: it derives from Uno's
+         SKCanvasElement and is the only chassis file with a UI dependency. -->
+    <Compile Include="..\Common\**\*.cs"
+             Exclude="..\Common\AmbientStarBackdrop.cs"
+             Link="Common\%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+
+</Project>

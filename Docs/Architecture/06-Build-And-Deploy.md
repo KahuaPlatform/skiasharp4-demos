@@ -10,6 +10,9 @@ Builds/
 ├── Build-<Demo>.ps1               ← per-demo build wrapper
 ├── Run-<Demo>.ps1                 ← per-demo run wrapper
 ├── Capture-Demo.ps1               ← window screenshot (desktop only)
+├── Test-All.ps1                   ← test aggregator
+├── Test-Common.ps1                ← chassis suite
+├── Test-Arcade.ps1                ← all-demos suite
 └── Publish-Site.ps1               ← wasm site bundler
 ```
 
@@ -66,6 +69,19 @@ flowchart LR
 ```
 
 Loops the `$scripts` array and invokes each `Build-<Demo>.ps1`. Tracks failures and prints a summary at the end. `Build-All -Wasm` automatically skips Uno3dViewer (it has no browserwasm TFM) — the skip is logged for visibility.
+
+## Running the tests
+
+```powershell
+.\Builds\Test-All.ps1
+.\Builds\Test-Common.ps1 -Filter "FullyQualifiedName~Camera2DTests"
+```
+
+Two MSTest suites — `Source/Common.Tests/` for the shared chassis and
+`Source/Arcade.Tests/` for all twelve demos — both on plain `net10.0` with no Uno SDK,
+no window and no GPU. `Test-All.ps1` mirrors `Build-All.ps1`'s shape and is
+deliberately **not** invoked by it: a failing test should not block a build. Full
+detail in [10 – Testing](10-Testing.md).
 
 ## Capturing a screenshot
 
@@ -216,4 +232,5 @@ Two things worth noting for production:
 | New wasm-publishable demo (game) | Also append the slug to `Publish-Site.ps1` `$games`. |
 | New shared chassis file | Nothing — `<Compile Include="..\..\Common\**\*.cs"/>` glob picks it up automatically next build. |
 | Screenshotting a demo | Nothing — `Capture-Demo.ps1` resolves the demo by name; no per-demo entry needed. |
+| New demo, test coverage | Add its `Game/**/*.cs` to `Arcade.Tests.csproj` and an entry to `DemoRegistry.All`; every existing check is data-driven off that registry. |
 | New per-demo audio voice | Csproj already has `<EmbeddedResource Include="...audio.js"/>` — nothing to change for the build. |

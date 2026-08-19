@@ -539,7 +539,9 @@ instruction that P2 items ship as proposals only:
 
 Explicitly **not** in this build:
 
-- **No test project.** There is none in the repo ([08](../Architecture/08-Chassis-Extensions.md#camera-unit-tests--planned-never-written)); none is added and nothing is planned around one.
+- ~~**No test project.**~~ True while Eli was built, and the reason its verification ran through a
+  throwaway harness. **Since reversed**: the repo now has MSTest suites, and Eli is registered in
+  `Arcade.Tests` alongside the other eleven demos. See [10 – Testing](../Architecture/10-Testing.md).
 - **No `Pool<T>`, no `Entity2D` base.** Both are settled "no" in 08. Eli's entity counts (≤ 8 enemies,
   ≤ 5 boulders) are an order of magnitude below Koa's 120-enemy cap, so the GC-stutter argument is
   weaker here than in the demo where it was already declined.

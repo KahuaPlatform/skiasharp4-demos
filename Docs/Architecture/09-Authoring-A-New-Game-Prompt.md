@@ -23,8 +23,11 @@ The repo's conventions are almost entirely invisible from a cold read of one dem
   eight entries and new games ship standalone ([08 § What was deliberately not built](08-Chassis-Extensions.md#what-was-deliberately-not-built)).
   An agent following [02 § Adding a new arcade-family demo](02-Demo-Anatomy.md#adding-a-new-arcade-family-demo)
   step 6, or the root README's step 4, will add one anyway — both predate the reversal.
-- There is **no test project anywhere in the repo**. Ask for tests and you get a new test-infrastructure
-  decision you didn't want to make.
+- ~~There is **no test project anywhere in the repo**. Ask for tests and you get a new
+  test-infrastructure decision you didn't want to make.~~ **Reversed.** The repo now has MSTest suites
+  for the chassis and for all twelve demos ([10 – Testing](10-Testing.md)). A new game is picked up by
+  the shared attract soak, render smoke and convention checks as soon as it is added to
+  `Arcade.Tests`.
 
 So the prompt's job is not to describe a game. It is to **fence the solution space**, so the agent's
 freedom is spent on gameplay rather than on re-deciding architecture that's already settled.
@@ -229,7 +232,9 @@ I will actually argue with.
 
 ```
 Out of scope — do not do these:
-- No test project. There is none in the repo; don't add one and don't plan around one.
+- ~~No test project. There is none in the repo; don't add one and don't plan around one.~~
+  **Reversed** — the repo has MSTest suites now ([10 – Testing](10-Testing.md)). Ask instead for the
+  new game to be registered in `Arcade.Tests`, which is two lines and inherits every existing check.
 - Don't build Pool<T> or an Entity2D base. Both are settled "no" in 08.
 - Don't unify SkiaSharp versions across demos, and don't touch KahuaNetwork (SkiaSharp 3) or
   UnoGallery's $(SkiaSharpVersion) switch.

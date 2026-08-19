@@ -51,7 +51,9 @@ UnoSkiaDemos/
 │   ├── Koa/
 │   ├── Eli/
 │   ├── Launcher/
-│   └── Uno3dViewer/
+│   ├── Uno3dViewer/
+│   ├── Common.Tests/        MSTest: the shared chassis
+│   └── Arcade.Tests/        MSTest: all twelve arcade demos, headless
 ├── Docs/                    Per-demo READMEs, design docs, screenshots
 │   └── <DemoName>/
 ├── Builds/                  PowerShell Build-/Run- scripts
@@ -143,6 +145,30 @@ The demos deliberately use different versions and feature sets — that's the po
 - Uno3dViewer adds Silk.NET (OpenGL + Assimp) and uses `<UnoFeatures>...GLCanvas</UnoFeatures>`
 
 All sixteen share `Uno.Sdk 6.7.0-dev.164` as the MSBuild SDK. Twelve of them (HokuLele, Lua, Mahina, Heiau, Kanapi, Alaloa, Hahai, Paku, Kiai, Koa, Eli, Launcher) share a neon-game chassis from `Source/Common/` (see [Source/Common](Source/Common/)).
+
+## Testing
+
+```powershell
+.\Builds\Test-All.ps1
+```
+
+Two MSTest suites, both plain `net10.0` — no Uno SDK, no window, no GPU:
+
+- **`Source/Common.Tests/`** — the shared chassis: `Camera2D` seam maths, the
+  `TileGrid` wall slide and its anti-tunnelling sub-steps, `FlowField`, `AsciiMap`,
+  `SeamlessTerrain` periodicity, and the primitives.
+- **`Source/Arcade.Tests/`** — all twelve arcade demos at once. Every demo ships an
+  attract-mode autopilot and a UI-free `Game/` folder, so each one can play itself
+  headlessly: a five-minute soak per demo, offscreen render smoke tests, and
+  convention checks that catch the mistakes which build perfectly (a demo wired into
+  `Build-All` but missing from `Publish-Site`, a stray `Common.csproj` reference, an
+  unwanted launcher card).
+
+`Test-All.ps1` is deliberately not part of `Build-All.ps1` — a failing test should not
+block a build. What is **not** covered, and why, is set out in
+[Docs/Architecture/10-Testing.md](Docs/Architecture/10-Testing.md); the short version
+is that the input layer in `MainPage.xaml.cs` needs a real window and is the largest
+untested surface in the repo.
 
 ## SkiaSharp 3 vs 4 in UnoGallery
 

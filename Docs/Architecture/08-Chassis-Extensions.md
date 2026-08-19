@@ -99,14 +99,19 @@ fields (`Pos`, `Vel`, `Radius`, `Alive`) and is explicitly documented as *non*-w
 of what Pohaku's toroidal entity wants. Sharing it would couple the games' entity models for
 near-zero payoff. This is now a settled "no", not a deferral: leave each game's local `Entity` base.
 
-### Camera unit tests — planned, never written
+### Camera unit tests — planned, skipped, later written
 
 Build order step 1 called for "a tiny wrap test and a clamp test" before wiring a game to the camera,
-on the reasoning that seam math is the easiest thing to get subtly wrong. **No test project exists in
-this repo**, for the camera or anything else, so this was never done. The wrap path is exercised in
-anger by Kia'i (seam-straddling sprites, toroidal collision) and the clamp path by Koa (edge-clamped
-dungeon), which is empirical coverage rather than regression coverage. A future change to
-`WrapDelta`, `NormalizeCenter`, or `ForEachVisibleX` has nothing to catch it but playtesting.
+on the reasoning that seam math is the easiest thing to get subtly wrong. That was right, and for a
+long time it did not happen: no test project existed in this repo, for the camera or anything else,
+so the wrap path had only the empirical coverage of Kia'i (seam-straddling sprites, toroidal
+collision) and the clamp path only Koa's edge-clamped dungeon. A change to `WrapDelta`,
+`NormalizeCenter` or `ForEachVisibleX` had nothing to catch it but playtesting.
+
+**This is now covered.** `Source/Common.Tests/Camera2DTests.cs` tests exactly what this section asked
+for — negative-folding `Wrap`, shortest-path `WrapDelta`, clamp framing including the
+world-narrower-than-view case, seam-crossing follow easing, and `ForEachVisibleX` replicas — plus the
+rest of the chassis. See [10 – Testing](10-Testing.md).
 
 ## Cross-game consistency decisions (as built)
 

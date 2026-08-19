@@ -1,3 +1,8 @@
+> **Historical record** — this is the Phase 1 prompt exactly as issued, kept unedited so the
+> design it produced can be read against it. Two constraints in it have since been reversed:
+> the repo now has MSTest suites (see [10 – Testing](../Architecture/10-Testing.md)), and Eli
+> is registered in `Arcade.Tests`.
+
 You are adding a new arcade-family game to the UnoSkiaDemos repo. This phase is design only.
 
 REQUIRED READING, in order:

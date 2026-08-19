@@ -108,6 +108,9 @@ Builds/
 ├── Build-<Demo>.ps1            ← one per demo
 ├── Run-<Demo>.ps1              ← one per demo
 ├── Capture-Demo.ps1            ← screenshots a running demo's window (desktop only)
+├── Test-All.ps1                ← runs every test suite
+├── Test-Common.ps1             ← chassis tests
+├── Test-Arcade.ps1             ← all-twelve-demo tests
 └── Publish-Site.ps1            ← bundles launcher + all wasm games into publish/site/
 ```
 

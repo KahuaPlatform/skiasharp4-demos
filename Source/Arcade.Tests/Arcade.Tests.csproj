@@ -1,0 +1,50 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>Arcade.Tests</RootNamespace>
+    <!-- Every arcade demo's Game/ folder is UI-free - pure sim plus SkiaSharp - so
+         the whole family can be driven from a plain net10.0 test host with no Uno
+         SDK involved. -->
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="MSTest.TestFramework" Version="3.6.4" />
+    <PackageReference Include="MSTest.TestAdapter" Version="3.6.4" />
+    <!-- One pin for all twelve demos. That is only legitimate because they are
+         currently uniform; SkiaSharpPinIsUniform in ArcadeConventionTests fails the
+         moment one diverges, at which point this project has to be split per demo
+         to preserve the repo's per-demo isolation. -->
+    <PackageReference Include="SkiaSharp" Version="4.151.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The chassis, as the demos source-include it. AmbientStarBackdrop is the one
+         chassis file with a UI dependency (it derives from Uno's SKCanvasElement). -->
+    <Compile Include="..\Common\**\*.cs"
+             Exclude="..\Common\AmbientStarBackdrop.cs"
+             Link="Common\%(RecursiveDir)%(Filename)%(Extension)" />
+
+    <!-- Each demo's sim + renderer. Only Game/ is pulled in: everything outside it
+         (App, MainPage, GameSurface, BackgroundSurface) is Uno-dependent, and the
+         input layer in MainPage.xaml.cs is deliberately NOT covered here - it needs
+         a real window. -->
+    <Compile Include="..\Pohaku\Pohaku\Game\**\*.cs"     Link="Demos\Pohaku\%(Filename)%(Extension)" />
+    <Compile Include="..\HokuLele\HokuLele\Game\**\*.cs" Link="Demos\HokuLele\%(Filename)%(Extension)" />
+    <Compile Include="..\Lua\Lua\Game\**\*.cs"           Link="Demos\Lua\%(Filename)%(Extension)" />
+    <Compile Include="..\Mahina\Mahina\Game\**\*.cs"     Link="Demos\Mahina\%(Filename)%(Extension)" />
+    <Compile Include="..\Heiau\Heiau\Game\**\*.cs"       Link="Demos\Heiau\%(Filename)%(Extension)" />
+    <Compile Include="..\Kanapi\Kanapi\Game\**\*.cs"     Link="Demos\Kanapi\%(Filename)%(Extension)" />
+    <Compile Include="..\Alaloa\Alaloa\Game\**\*.cs"     Link="Demos\Alaloa\%(Filename)%(Extension)" />
+    <Compile Include="..\Hahai\Hahai\Game\**\*.cs"       Link="Demos\Hahai\%(Filename)%(Extension)" />
+    <Compile Include="..\Paku\Paku\Game\**\*.cs"         Link="Demos\Paku\%(Filename)%(Extension)" />
+    <Compile Include="..\Kiai\Kiai\Game\**\*.cs"         Link="Demos\Kiai\%(Filename)%(Extension)" />
+    <Compile Include="..\Koa\Koa\Game\**\*.cs"           Link="Demos\Koa\%(Filename)%(Extension)" />
+    <Compile Include="..\Eli\Eli\Game\**\*.cs"           Link="Demos\Eli\%(Filename)%(Extension)" />
+  </ItemGroup>
+
+</Project>
