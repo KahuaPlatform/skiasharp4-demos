@@ -173,7 +173,7 @@ The fastest way to start a new demo is to copy an existing one (Alaloa is a clea
 3. Update `globalThis.alaloaAudio` → `globalThis.<newdemo>Audio` in the audio.js + AudioEngine.cs.
 4. Replace the `Game/` content with the new game's logic.
 5. Add `Builds/Build-<NewDemo>.ps1` + `Run-<NewDemo>.ps1`, append to `Build-All.ps1` `$scripts`.
-6. Add an entry to [`Source/Launcher/Launcher/Game/GameCatalog.cs`](../../Source/Launcher/Launcher/Game/GameCatalog.cs) so the launcher includes it.
+6. ~~Add an entry to [`Source/Launcher/Launcher/Game/GameCatalog.cs`](../../Source/Launcher/Launcher/Game/GameCatalog.cs) so the launcher includes it.~~ **Reversed — skip this step.** Extra cards broke the launcher's grid layout, so the catalog stays at its original eight entries and new games ship standalone. See [08 – Chassis Extensions § What was deliberately not built](08-Chassis-Extensions.md#what-was-deliberately-not-built).
 7. Append the slug to `$games` in [`Builds/Publish-Site.ps1`](../../Builds/Publish-Site.ps1).
 8. Add `Docs/<NewDemo>/README.md` matching the per-game pattern.
 

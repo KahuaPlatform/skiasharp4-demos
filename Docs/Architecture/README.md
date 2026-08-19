@@ -14,6 +14,7 @@ Architecture-level documentation for the UnoSkiaDemos repository. Per-demo speci
 | [06 – Build and Deploy](06-Build-And-Deploy.md) | `Builds/` scripts, multi-targeting (`net10.0-desktop` vs `net10.0-browserwasm`), and the `Publish-Site.ps1` pipeline that bundles every wasm game + the launcher into a single static site. |
 | [07 – Launcher](07-Launcher.md) | Catalog-driven UI, click-dispatch (exe-direct on desktop, navigation on wasm), and the two themes (Neon and Bob Ross). |
 | [08 – Chassis Extensions](08-Chassis-Extensions.md) | Why the scrolling-world chassis tier looks the way it does: the one-`Camera2D`-not-two reconciliation Kia'i and Koa forced, what was deliberately left unbuilt (`Pool<T>`, `Entity2D`), and the cross-game decisions both games settled. |
+| [09 – Authoring a New-Game Prompt](09-Authoring-A-New-Game-Prompt.md) | How to write the prompt that gets an AI agent to produce a new arcade-family game that fits the repo: the design-then-implement two-phase workflow, the ten prompt blocks, a full worked example, the review checklist, and the values an agent will otherwise guess. |
 
 ## Mermaid rendering
 
@@ -28,3 +29,4 @@ If you're new to the repo:
 3. [04 – Rendering Pipeline](04-Rendering-Pipeline.md) and [05 – Audio](05-Audio.md) are deeper dives into the two cross-cutting subsystems.
 4. [06 – Build and Deploy](06-Build-And-Deploy.md) and [07 – Launcher](07-Launcher.md) are operational — needed when you're adding a new demo or publishing the site.
 5. [08 – Chassis Extensions](08-Chassis-Extensions.md) is the design-rationale companion to 03 — read it when you're changing the camera or adding a scrolling-world game, so you don't relitigate decisions that were already made.
+6. [09 – Authoring a New-Game Prompt](09-Authoring-A-New-Game-Prompt.md) is the process doc — read it when you're about to have an agent build a new game, not when you're reading code.

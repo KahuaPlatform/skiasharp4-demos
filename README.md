@@ -27,6 +27,7 @@ Each demo's full per-demo docs live in [Docs/](Docs/). The original source repos
 ## Documentation
 
 - **[Docs/Architecture/](Docs/Architecture/README.md)** — cross-cutting architecture reference: demo anatomy, shared chassis, rendering pipeline, audio, build/deploy, launcher dispatch. Each doc has Mermaid diagrams; start with the [README](Docs/Architecture/README.md) for the reading order.
+- **[Docs/Architecture/09-Authoring-A-New-Game-Prompt.md](Docs/Architecture/09-Authoring-A-New-Game-Prompt.md)** — how to write the prompt that gets an AI agent to build a new arcade-family game that fits the repo: two-phase design-then-implement workflow, the prompt template, a worked example, and the review checklist.
 - **[Docs/<Demo>/README.md](Docs/)** — per-demo docs (mechanics, controls, file map). One per demo.
 
 ## Layout
@@ -125,7 +126,7 @@ dotnet run --project Source/Pohaku/Pohaku/Pohaku.csproj -f net10.0-browserwasm
 1. Create `Source/<NewDemo>/<NewDemo>/<NewDemo>.csproj` plus `Directory.Build.props`, `Directory.Packages.props`, `global.json`, and `<NewDemo>.sln` in `Source/<NewDemo>/`. Don't add anything build-related at the repo root — that would cascade into the other demos' MSBuild trees and break their isolation.
 2. Add `Builds/Build-<NewDemo>.ps1` and `Builds/Run-<NewDemo>.ps1` following the existing pattern.
 3. Append the script name to the `$scripts` array in `Builds/Build-All.ps1`.
-4. Add an `Entry(...)` to [`Source/Launcher/Launcher/Game/GameCatalog.cs`](Source/Launcher/Launcher/Game/GameCatalog.cs) so the launcher shows a tile for it, and append the slug to the `$games` array in [`Builds/Publish-Site.ps1`](Builds/Publish-Site.ps1) so it gets bundled into the static site.
+4. Append the slug to the `$games` array in [`Builds/Publish-Site.ps1`](Builds/Publish-Site.ps1) so it gets bundled into the static site. **Don't** add an `Entry(...)` to [`Source/Launcher/Launcher/Game/GameCatalog.cs`](Source/Launcher/Launcher/Game/GameCatalog.cs) — extra cards broke the launcher's grid layout, so the catalog stays at its original eight entries and newer games (Paku, Kiai, Koa) ship standalone. See [Docs/Architecture/08-Chassis-Extensions.md](Docs/Architecture/08-Chassis-Extensions.md).
 5. Add `Docs/<NewDemo>/README.md`.
 
 The fastest way is to copy an existing demo as a starting point (Pohaku if you want vector+neon, UnoGallery if you want the full SKCanvasElement scene + effects pipeline).
