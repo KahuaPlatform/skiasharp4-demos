@@ -108,7 +108,7 @@ stateDiagram-v2
     Attract --> Title: any key / click
     Attract --> Title: all entities dead
     GameOver --> Playing: Space / Enter / Click
-    GameOver --> Title: idle (some demos)
+    GameOver --> Title: idle 8s
 ```
 
 | State | Purpose | Input handling |
@@ -116,7 +116,14 @@ stateDiagram-v2
 | `Title` | Title screen with controls + "PRESS SPACE TO START". Renders ambient/idle animation. | Space/Enter/Click → Playing. Idle 12s → Attract. |
 | `Playing` | Active gameplay. Reads player input. | All game keys; Esc to title (some demos). |
 | `Attract` | A demo loop with a bot autopiloting the game. Score still ticks but is reset on key press. | Any key → Title. |
-| `GameOver` | "GAME OVER" overlay with final score + "PRESS SPACE TO PLAY AGAIN". | Space/Enter/Click → Playing. |
+| `GameOver` | "GAME OVER" overlay with final score + "PRESS SPACE TO PLAY AGAIN". | Space/Enter/Click → Playing. Idle `GameOverIdleSeconds` (8s) → Title, so an unattended cabinet cycles back into Attract instead of parking here. |
+
+**The cycle has to close.** `GameOver → Title` was optional for a long time, and only Paku implemented
+it — so every other demo sat on the GAME OVER panel indefinitely, because the `Title → Attract` idle
+timer only advances on the Title screen. Attract mode was unreachable after a death until someone
+pressed a key. Every demo now idles out of `GameOver` after `GameOverIdleSeconds`; end to end that is
+8s to Title plus 12s to Attract. (Paku keeps its own 3s `GameOverDelay` straight to Attract — its
+Attract *is* its title screen.)
 
 `GameWorld.Mode` holds the current state; `GameWorld.Update(dt)` switches on it and runs the appropriate physics. Mode transitions go through helper methods like `StartGame()`, `StartAttract()`, `ReturnToTitle()`, `GoToGameOver()` so they can do the right side effects (reset entities, save high score, etc.).
 

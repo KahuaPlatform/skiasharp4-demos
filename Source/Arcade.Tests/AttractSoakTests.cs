@@ -64,6 +64,39 @@ public sealed class AttractSoakTests
 
     [DataTestMethod]
     [DynamicData(nameof(DemoRegistry.AllRows), typeof(DemoRegistry), DynamicDataSourceType.Method)]
+    public void GameOver_ReturnsToAnIdleScreenUnattended(DemoEntry demo)
+    {
+        // An arcade cabinet has to come back round on its own. Every demo except Paku
+        // used to park on the GAME OVER panel indefinitely: the Title -> Attract idle
+        // timer only advances on the Title screen, so after a death attract mode was
+        // unreachable until somebody pressed a key.
+        if (demo.Name == "Paku")
+        {
+            // Paku publishes Mode as { get; private set; } so it cannot be driven into
+            // GameOver from here. It is also the demo that already cycled before this
+            // was made family-wide; PakuStillCyclesOutOfGameOver in
+            // ArcadeConventionTests covers it instead.
+            return;
+        }
+
+        var world = NewWorld(demo);
+        Assert.IsTrue(DemoRegistry.TrySetMode(demo, world, "GameOver"),
+            $"{demo.Name}: could not drive the world into GameOver");
+
+        object? mode = null;
+        for (int i = 0; i < 60 * 30; i++)          // 30s, well past the 8s idle-out
+        {
+            DemoRegistry.Update(demo, world, Dt);
+            mode = DemoRegistry.Mode(demo, world);
+            if (mode?.ToString() != "GameOver") break;
+        }
+
+        Assert.AreNotEqual("GameOver", mode?.ToString(),
+            $"{demo.Name} never left GameOver unattended - the attract loop cannot come round");
+    }
+
+    [DataTestMethod]
+    [DynamicData(nameof(DemoRegistry.AllRows), typeof(DemoRegistry), DynamicDataSourceType.Method)]
     public void Mode_NeverLeavesItsOwnEnum(DemoEntry demo)
     {
         // A mode holding a value outside its enum means something assigned a cast int,

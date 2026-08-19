@@ -144,9 +144,28 @@ public sealed class GameWorld
 
     // --- Per-frame update ---
 
+    // --- Attract cycle ------------------------------------------------------
+    // An unattended cabinet has to come back round. Without this the game parks on
+    // the GAME OVER panel forever, because the Title -> Attract idle timer only ever
+    // advances on the Title screen, so attract mode was unreachable after a death
+    // until somebody pressed a key. Paku was the only demo in the family that
+    // already cycled.
+    public const float GameOverIdleSeconds = 8f;   // long enough to read your score
+    float _gameOverIdle;
+
     /// <summary>Advances the game one frame; dispatches on <see cref="Mode"/>.</summary>
     public void Update(float dt)
     {
+        // Drop back to the idle screen after a game over so the attract loop
+        // comes round again. Self-resetting: the timer is held at zero in every
+        // other mode, so re-entering GameOver always starts from a clean count.
+        if (Mode == GameMode.GameOver)
+        {
+            _gameOverIdle += dt;
+            if (_gameOverIdle > GameOverIdleSeconds) ReturnToTitle();
+        }
+        else _gameOverIdle = 0f;
+
         if (PlacardTimer > 0) PlacardTimer -= dt;
         if (AttractInputCooldown > 0) AttractInputCooldown -= dt;
 

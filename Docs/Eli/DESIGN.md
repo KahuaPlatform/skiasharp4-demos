@@ -323,7 +323,9 @@ is expected (`Common/HighScoreStore.cs`).
 
 - **Modes** — the mandated 4-state `GameMode { Title, Playing, GameOver, Attract }`
   ([02 § the canonical game-state machine](../Architecture/02-Demo-Anatomy.md#the-canonical-game-state-machine)).
-  Title idles to Attract after **12 s** (`Koa/Game/GameWorld.cs:175-176`).
+  Title idles to Attract after **12 s** (`Koa/Game/GameWorld.cs:175-176`), and GameOver idles back to
+  Title after **8 s** (`GameOverIdleSeconds`) so an unattended cabinet cycles — 20 s from death to
+  attract. See [As built](#as-built).
 - **Loop** — `CompositionTarget.Rendering`, never a `DispatcherTimer`; `dt` from a `Stopwatch` clamped
   to `[1/60, 1/30]`; **both** canvases invalidated every tick (`Koa/MainPage.xaml.cs:55-77`).
 - **Input** — latched cardinal flags as in Koa (`Koa/MainPage.xaml.cs:80-111`), but composed
@@ -598,6 +600,13 @@ history, with how each one was found:
   digger had *already carved*. The penalty therefore almost never applied and tunnelling ran at
   ~115 px/s, barely below the 132 px/s walk. `MoveDigger` now asks "is the next cell along my facing
   still `Dirt`?", which brings it to a measured 74 px/s.
+
+- **The cabinet cycles after a game over** (`GameOverIdleSeconds = 8f`). The design specified only
+  "Title idles to Attract after 12 s", which left `GameOver` a dead end: the idle timer advances on
+  the Title screen alone, so attract mode was unreachable after a death until somebody pressed a key.
+  This turned out to be a whole-family gap rather than an Eli one — ten of the eleven other demos had
+  it too, Paku being the exception — so all twelve now idle out of `GameOver`. Measured end to end:
+  8 s to Title, then the existing 12 s to Attract.
 
 Everything else — the harpoon state machine, boulder gravity, the two-mode AI, the rest of the
 tunable table, the four authored fields — shipped as written.

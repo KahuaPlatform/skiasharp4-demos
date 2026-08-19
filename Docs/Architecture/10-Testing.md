@@ -91,6 +91,7 @@ the glob. A silently-skipped demo would be worse than a broken build.
 | Suite | What it does |
 |---|---|
 | **Attract soak** | Every demo ships an autopilot, so every demo can play itself with no input. Two minutes idling on the title screen, five minutes of attract mode, both clamped frame times, and a sweep of degenerate viewports (`0x0`, `1x1`, `1920x1`) |
+| **Attract cycle** | Forces each world into `GameOver` and asserts it leaves unattended — the cabinet has to come back round. Paku publishes `Mode` as `{ get; private set; }` so it cannot be driven; `PakuStillCyclesOutOfGameOver` guards its mechanism structurally instead |
 | **Render smoke** | Renders each demo to an offscreen `SKSurface`: title screen, twenty seconds of attract, awkward canvas sizes, and a check that `Render` leaves the canvas `SaveCount` balanced (`Camera2D.Apply` pushes a `Save` the caller must restore) |
 | **Conventions** | Chassis source-included and never project-referenced; exactly the two TFMs; `CompositionTarget.Rendering` and no `DispatcherTimer`; dt clamped; every declared canvas invalidated; wired into both `Build-All` *and* `Publish-Site`; the launcher catalog still at eight entries |
 

@@ -188,6 +188,18 @@ public sealed class ArcadeConventionTests
                 $"{demo.Name}.GameMode is missing {required} - the 4-state machine is the standard");
     }
 
+    [TestMethod]
+    public void PakuStillCyclesOutOfGameOver()
+    {
+        // Paku cannot be driven into GameOver by the behavioural test (its Mode is
+        // { get; private set; }), and it is the one demo that already cycled before
+        // the behaviour was made family-wide - so guard its mechanism structurally.
+        var src = File.ReadAllText(Path.Combine(
+            RepoRoot, "Source", "Paku", "Paku", "Game", "GameWorld.cs"));
+        StringAssert.Contains(src, "GameOverDelay", "Paku lost its game-over cycle timer");
+        StringAssert.Contains(src, "StartAttract()", "Paku must return to attract after a game over");
+    }
+
     // --- The launcher reversal ------------------------------------------------
 
     [TestMethod]

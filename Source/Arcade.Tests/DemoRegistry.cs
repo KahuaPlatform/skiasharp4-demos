@@ -91,6 +91,20 @@ public static class DemoRegistry
         return d.World.GetField("Mode")?.GetValue(world);
     }
 
+    /// <summary>
+    /// Force the world into a named mode. Returns false when the demo does not expose
+    /// a settable <c>Mode</c> — Paku publishes it as <c>{ get; private set; }</c> — so
+    /// callers can handle that demo explicitly rather than silently skipping it.
+    /// </summary>
+    public static bool TrySetMode(DemoEntry d, object world, string modeName)
+    {
+        var f = d.World.GetField("Mode");
+        if (f is null || !f.FieldType.IsEnum) return false;
+        if (!Enum.GetNames(f.FieldType).Contains(modeName)) return false;
+        f.SetValue(world, Enum.Parse(f.FieldType, modeName));
+        return true;
+    }
+
     public static void Render(DemoEntry d, object world, SkiaSharp.SKCanvas canvas, float w, float h)
     {
         var m = d.Renderer.GetMethod("Render", BindingFlags.Public | BindingFlags.Static)
